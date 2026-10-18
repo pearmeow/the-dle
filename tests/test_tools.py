@@ -1,6 +1,7 @@
 import json
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -21,9 +22,10 @@ class FakeResponse:
         return False
 
     def read(self):
-        return json.dumps({"output": [{"type": "message", "content": [
-            {"type": "output_text", "text": '{"guess_id":"a","reason":"It fits."}'},
-        ]}]}).encode()
+        return json.dumps({"answers": {"game_guess": {
+            "type": "choice", "choice": "a", "probabilities": {"a": 0.8, "b": 0.2},
+            "confidence": 0.6,
+        }}}).encode()
 
 
 class GameToolTests(unittest.TestCase):
@@ -51,12 +53,51 @@ class GameToolTests(unittest.TestCase):
 
         def fake_urlopen(request, timeout):
             captured["body"] = json.loads(request.data)
+            captured["authorization"] = request.get_header("Authorization")
             return FakeResponse()
 
-        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-only"}), patch.object(jev_server, "urlopen", fake_urlopen):
+        with patch.dict(os.environ, {"JEV_API_KEY": "test-only"}), patch.object(jev_server, "urlopen", fake_urlopen):
             answer = jev_server.ask_jev(*clean)
         self.assertEqual(answer["guess_id"], "a")
-        self.assertNotIn("target_id", captured["body"]["input"])
+        self.assertEqual(captured["authorization"], "Bearer test-only")
+        self.assertEqual(captured["body"]["model"], "jev-latest")
+        self.assertEqual(captured["body"]["state"], {"hints_in_order": ["Vehicles"]})
+        self.assertEqual(captured["body"]["questions"]["game_guess"]["type"], "choice")
+        self.assertEqual(set(captured["body"]["questions"]["game_guess"]["criteria"]), {"a", "b"})
+        self.assertNotIn("target_id", json.dumps(captured["body"]))
+
+    def test_jev_uses_the_only_remaining_game_without_api_call(self):
+        games = [
+            {"id": "a", "name": "Alpha", "genre": "Arcade", "description": "Cars", "features": []},
+            {"id": "b", "name": "Beta", "genre": "Puzzle", "description": "Cards", "features": []},
+        ]
+        with patch.object(jev_server, "urlopen") as api_call:
+            answer = jev_server.ask_jev(games, ["cards"], ["a"], 1)
+        self.assertEqual(answer["guess_id"], "b")
+        api_call.assert_not_called()
+
+    def test_jev_rejects_invalid_choice(self):
+        games = [
+            {"id": "a", "name": "Alpha", "genre": "Arcade", "description": "Cars", "features": []},
+            {"id": "b", "name": "Beta", "genre": "Puzzle", "description": "Cards", "features": []},
+        ]
+
+        class InvalidResponse(FakeResponse):
+            def read(self):
+                return b'{"answers":{"game_guess":{"type":"choice","choice":"missing"}}}'
+
+        with patch.dict(os.environ, {"JEV_API_KEY": "test-only"}), patch.object(jev_server, "urlopen", return_value=InvalidResponse()):
+            with self.assertRaisesRegex(ValueError, "invalid candidate ID"):
+                jev_server.ask_jev(games, ["cards"], [], 1)
+
+    def test_jev_api_key_loads_from_env_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ".env"
+            path.write_text('JEV_API_KEY="file-key" # local test key\n')
+            with patch.dict(os.environ, {"JEV_API_KEY": ""}):
+                self.assertEqual(jev_server.get_api_key(path), "file-key")
+            with patch.dict(os.environ, {"JEV_API_KEY": "shell-key"}):
+                self.assertEqual(jev_server.get_api_key(path), "shell-key")
 
     def test_jaccard_and_distinctiveness(self):
         first = {"name": "First", "features": ["cards", "train", "spells"]}

@@ -22,21 +22,25 @@ Offline Jev is a deterministic clue matcher. It scores words and phrases against
 
 ## Use a model for Jev
 
-The included Python server calls the [OpenAI Responses API](https://developers.openai.com/api/docs/guides/text-generation) with structured output. The API key stays in the server process. Godot sends only the candidate list, hints, and previous guesses; it checks the selected target locally.
+The included Python server calls [TypeSafe's Jev API](https://docs.typesafe.ai/api) with a [Choice question](https://docs.typesafe.ai/primitives/choice) over the unguessed games. Jev returns a game ID, not generated prose, so the game supplies a short fixed line beneath the guess. The API key stays in the server process. Godot sends only the candidate list, hints, and previous guesses; it checks the selected target locally.
 
-Start the server in one terminal:
+Copy `.env.example` to `.env` in the project root and put your TypeSafe API key there:
 
-```sh
-OPENAI_API_KEY=your_key python3 server/jev_server.py
+```dotenv
+JEV_API_KEY=your_typesafe_api_key
 ```
 
-Start the game in another:
+The project `.env` file is ignored by Git. Start the server in one terminal, then the game in another:
+
+```sh
+python3 server/jev_server.py
+```
 
 ```sh
 JEV_API_URL=http://127.0.0.1:8765/guess godot --path .
 ```
 
-Set `OPENAI_MODEL` on the server to use another compatible model. If the server is unreachable or returns an invalid answer, the game visibly falls back to offline Jev. The server listens on `127.0.0.1` by default. For a browser export, set `JEV_ALLOWED_ORIGIN` to the exact site origin and host the server behind HTTPS.
+The server reads `.env` from the project root regardless of your working directory. A process `JEV_API_KEY` takes precedence over `.env`; `JEV_MODEL` defaults to `jev-latest`. If the server is unreachable or returns an invalid answer, the game visibly falls back to offline Jev. The server listens on `127.0.0.1` by default. For a browser export, set `JEV_ALLOWED_ORIGIN` to the exact site origin and host the server behind HTTPS.
 
 ## Generate a board from RAWG
 
