@@ -55,6 +55,7 @@ var hint_draft := ""
 var jev_url := ""
 var used_remote := false
 var remote_failed := false
+var use_remote_jev := true
 var compact_layout := false
 var tiny_layout := false
 var data_source := "CURATED"
@@ -447,7 +448,7 @@ func _submit_hint() -> void:
 	var previous := []
 	for guess in guesses:
 		previous.append(guess.get("id", ""))
-	if jev_url.is_empty():
+	if jev_url.is_empty() or not use_remote_jev:
 		get_tree().create_timer(0.48).timeout.connect(_resolve_local_guess)
 		return
 	var payload := {"candidates": _candidates(), "hints": hints, "previous_guesses": previous, "level": level_index + 1}
@@ -461,6 +462,18 @@ func _show_message(value: String) -> void:
 	message = value
 	_render()
 	call_deferred("_focus_current_hint")
+
+
+func _toggle_remote_jev() -> void:
+	if jev_url.is_empty():
+		return
+	use_remote_jev = not use_remote_jev
+	# Clear stale status flags so the chip reflects the new choice
+	# cleanly instead of lingering on an old "fallback" state.
+	remote_failed = false
+	if not use_remote_jev:
+		used_remote = false
+	_render()
 
 
 func _on_http_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -879,8 +892,27 @@ func _build_jev(parent: BoxContainer) -> void:
 	var title := _vbox(intro, 0)
 	title.add_child(_label("JEV", 19, TEXT, true))
 	title.add_child(_label("YOUR GUESSING PARTNER", 10, MUTED))
-	var mode_text := "OFFLINE FALLBACK" if remote_failed else ("MODEL CONNECTED" if used_remote else ("MODEL ENDPOINT SET" if not jev_url.is_empty() else "OFFLINE MODE"))
+	var mode_text: String
+	if jev_url.is_empty():
+		mode_text = "OFFLINE MODE"
+	elif not use_remote_jev:
+		mode_text = "OFFLINE (BY CHOICE)"
+	elif remote_failed:
+		mode_text = "OFFLINE FALLBACK"
+	elif used_remote:
+		mode_text = "MODEL CONNECTED"
+	else:
+		mode_text = "MODEL ENDPOINT SET"
 	box.add_child(_chip(mode_text, BLUE))
+	# Only expose the toggle when an endpoint is actually configured;
+	# otherwise there's nothing to switch to.
+	if not jev_url.is_empty():
+		var toggle_btn := _button("AI JEV: ON" if use_remote_jev else "AI JEV: OFF", use_remote_jev)
+		toggle_btn.pressed.connect(_toggle_remote_jev)
+		toggle_btn.tooltip_text = "Toggle whether hints go to the TypeSafe model or stay on the local heuristic."
+		box.add_child(toggle_btn)
+		var caption := "ON: hints are sent to the AI model via Cloudflare." if use_remote_jev else "OFF: hints stay on the local heuristic."
+		box.add_child(_paragraph(caption, 11, MUTED))
 	if stage == "select":
 		_gap(box, 8)
 		box.add_child(_label("How it works", 21, TEXT, true))
