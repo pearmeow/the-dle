@@ -48,6 +48,7 @@ var tiny_layout := false
 var data_source := "CURATED"
 var autosave_clock := 0.0
 var pool_games: Dictionary = {}
+var pool_variants: Array = []
 var refresh_count := 0
 
 var http: HTTPRequest
@@ -118,19 +119,46 @@ func _try_load_pool_board(path: String) -> bool:
 		return false
 	if String(data.get("generated_for", "")) != day_key:
 		return false
+	var variants_raw: Array = data.get("variants", [])
+	if variants_raw.is_empty():
+		# Legacy JSON (pre-variants) would force the GDScript level
+		# builder to run synchronously here, freezing the window for
+		# several seconds. Skip it so the curated fallback renders
+		# instantly; the async pool fetch will replace us shortly
+		# with a modern copy that includes variants.
+		return false
 	var games_dict: Dictionary = data.get("games", {})
 	if games_dict.is_empty():
 		return false
-	var pack := LevelBuilder.build_pack(games_dict, day_key + "#" + str(refresh_count))
-	if pack.is_empty():
-		return false
 	pool_games = games_dict
+	pool_variants = variants_raw
+	var pack := _board_for_variant(refresh_count)
+	if pack.is_empty():
+		pool_games = {}
+		pool_variants = []
+		return false
 	catalog = games_dict
 	levels = pack
 	pack_index = 0
 	data_source = "RAWG"
 	board_id = "pool:" + day_key + ":v" + str(refresh_count)
 	return true
+
+
+func _board_for_variant(variant_index: int) -> Array:
+	# Preferred path: use the board CI pre-composed for us. Instant
+	# because it's just a list lookup; no choose_group loop at all.
+	if variant_index < pool_variants.size():
+		var pack = pool_variants[variant_index]
+		if typeof(pack) == TYPE_ARRAY and pack.size() == 7:
+			return pack
+	# Fallback: compose on the client. This path is slow for large
+	# pools (seconds, not milliseconds) because the GDScript Jaccard
+	# loop pays for every pair-wise tag comparison. Only reached when
+	# the pool JSON predates the "variants" field.
+	if pool_games.is_empty():
+		return []
+	return LevelBuilder.build_pack(pool_games, day_key + "#" + str(variant_index))
 
 
 func _try_load_legacy_generated() -> bool:
@@ -205,10 +233,14 @@ func _on_pool_fetched(result: int, code: int, _headers: PackedStringArray, body:
 	var games_dict: Dictionary = data.get("games", {})
 	if games_dict.is_empty():
 		return
-	var pack := LevelBuilder.build_pack(games_dict, day_key + "#" + str(refresh_count))
+	var variants_raw: Array = data.get("variants", [])
+	if variants_raw.is_empty():
+		return   # Server returned a legacy JSON; keep what we have
+	pool_games = games_dict
+	pool_variants = variants_raw
+	var pack := _board_for_variant(refresh_count)
 	if pack.is_empty():
 		return
-	pool_games = games_dict
 	catalog = games_dict
 	levels = pack
 	data_source = "RAWG"
@@ -236,7 +268,7 @@ func _refresh_board() -> void:
 	if not _can_refresh():
 		return
 	refresh_count += 1
-	var pack := LevelBuilder.build_pack(pool_games, day_key + "#" + str(refresh_count))
+	var pack := _board_for_variant(refresh_count)
 	if pack.is_empty():
 		refresh_count -= 1
 		return
@@ -274,8 +306,8 @@ func _load_daily_progress() -> void:
 	refresh_count = clampi(int(saved.get("refresh_count", 0)), 0, MAX_REFRESHES)
 	# Rebuild today's board with the saved variant so the player sees
 	# the same shuffle they committed to before quitting.
-	if data_source == "RAWG" and refresh_count > 0 and not pool_games.is_empty():
-		var variant_pack := LevelBuilder.build_pack(pool_games, day_key + "#" + str(refresh_count))
+	if data_source == "RAWG" and refresh_count > 0:
+		var variant_pack := _board_for_variant(refresh_count)
 		if not variant_pack.is_empty():
 			levels = variant_pack
 			board_id = "pool:" + day_key + ":v" + str(refresh_count)
