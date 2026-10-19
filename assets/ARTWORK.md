@@ -3,7 +3,8 @@
 Created with the built-in image generation tool for this redesign.
 
 - `jev.png`: original detective mascot illustration.
-- `covers.png`: six genre illustrations in a 3 × 2 atlas, cropped at runtime. These are themed illustrations, not official covers or accurate depictions of individual titles.
+- `covers.png`: the original six-illustration concept atlas, preserved as reference; no longer used for game choices.
+- `game-covers/`: matching game artwork downloaded from Steam. Source and store URLs are recorded per title in `game-covers.json`. Game artwork belongs to its respective owners. Unsupported titles use a typographic game-file card.
 - `paper.svg`: lightweight repeatable paper flecks drawn as native vector artwork.
 - `Bitter.ttf` and `Lato-Regular.ttf`: bundled open-license fonts from the Google Fonts repository. License texts are included alongside the fonts.
 

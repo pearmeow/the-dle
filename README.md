@@ -24,7 +24,7 @@ Offline Jev is a deterministic clue matcher. It scores words and phrases against
 
 Run `godot --path . -- --playtest` for a fresh run without reading or writing daily progress. The window is labeled **Playtest**. Close it when finished. Normal launches continue using the daily save.
 
-The tabletop interface uses original genre artwork rather than official game covers. Artwork prompts and font license information are in `assets/ARTWORK.md`.
+The tabletop interface uses matching game covers where available and typographic game-file cards for other titles. Cover sources are recorded in `assets/game-covers.json`; original mascot prompts and font license information are in `assets/ARTWORK.md`.
 
 ## Use a model for Jev
 
