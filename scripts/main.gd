@@ -8,10 +8,10 @@ const PANEL := Color("#faf5e9")
 const PANEL_LIGHT := Color("#eee4d0")
 const BORDER := Color("#c8bba3")
 const TEXT := Color("#28251f")
-const MUTED := Color("#736b5d")
-const LIME := Color("#747d42")
+const MUTED := Color("#5f594d")
+const LIME := Color("#5a642d")
 const BLUE := Color("#6c8580")
-const CORAL := Color("#d96e58")
+const CORAL := Color("#b84e39")
 
 const SAVE_PATH := "user://daily_save.json"
 const CURATED_PATH := "res://data/levels.json"
@@ -548,7 +548,7 @@ func _render() -> void:
 	_build_main(body)
 	_build_jev(body)
 	var footer := _hbox(page, 8)
-	footer.add_child(_label("Level %d of 7  ·  %s" % [level_index + 1, _current_level().get("theme", "Today’s mystery")], 13, MUTED))
+	footer.add_child(_label("Level %d / 7" % (level_index + 1) if tiny_layout else "Level %d of 7  ·  %s" % [level_index + 1, _current_level().get("theme", "Today’s mystery")], 14, MUTED))
 	_spacer(footer, true)
 	if data_source == "RAWG":
 		var attribution := _button("GAME DATA: RAWG ↗", false)
@@ -659,7 +659,7 @@ func _card_art(game: Dictionary, width: float, height: float) -> Control:
 			var image := TextureRect.new()
 			image.texture = load(String(entry["path"]))
 			image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 			image.custom_minimum_size = Vector2(width, height)
 			image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			return image
@@ -722,21 +722,26 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 		content.add_child(artwork)
 		var title := _paragraph(String(game["name"]), 18, TEXT)
 		title.add_theme_font_override("font", heading_font)
-		title.custom_minimum_size.x = width - 14
+		title.custom_minimum_size = Vector2(width - 14, 44)
 		title.max_lines_visible = 2
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		content.add_child(title)
 		var caption := _paragraph(_card_caption(game), 16, MUTED)
+		caption.custom_minimum_size.y = 64 if selectable else 44
 		caption.max_lines_visible = 3 if selectable else 2
 		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		content.add_child(caption)
-		if selected:
-			content.add_child(_label("YOUR SECRET", 11, CORAL, true))
+		if not selectable:
+			var secret_mark := _label("✓ YOUR SECRET" if selected else " ", 13, CORAL, true)
+			secret_mark.custom_minimum_size.y = 18
+			content.add_child(secret_mark)
 		if selectable:
 			var choose := _button("%02d   Choose →" % [i + 1], false)
 			choose.add_theme_font_size_override("font_size", 16)
 			choose.pressed.connect(_choose_target.bind(String(game["id"])))
 			content.add_child(choose)
+			card.mouse_entered.connect(_highlight_card.bind(card, true))
+			card.mouse_exited.connect(_highlight_card.bind(card, false))
 			card.gui_input.connect(func(event: InputEvent) -> void:
 				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 					_choose_target(String(game["id"]))
@@ -747,6 +752,10 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 			content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			card.tooltip_text = "Keep " + String(game["name"]) + " secret from Jev"
+
+
+func _highlight_card(card: PanelContainer, hovered: bool) -> void:
+	card.add_theme_stylebox_override("panel", _style(Color("#fff9ef") if hovered else PANEL, CORAL if hovered else BORDER, 5, 2 if hovered else 1, 7))
 
 
 func _build_hint(box: BoxContainer) -> void:
@@ -771,7 +780,7 @@ func _build_hint(box: BoxContainer) -> void:
 		hint_edit.text_submitted.connect(func(_value: String) -> void: _submit_hint())
 		compose.add_child(hint_edit)
 	var bottom := _hbox(compose, 12)
-	count_label = _label("%d / %d words" % [JevLogic.word_count(hint_draft), WORD_LIMITS[level_index]], 13, MUTED)
+	count_label = _label("%d / %d words" % [JevLogic.word_count(hint_draft), WORD_LIMITS[level_index]], 16, MUTED)
 	bottom.add_child(count_label)
 	_spacer(bottom, true)
 	if stage != "thinking":
@@ -779,9 +788,9 @@ func _build_hint(box: BoxContainer) -> void:
 		submit.pressed.connect(_submit_hint)
 		bottom.add_child(submit)
 	var stats := _hbox(compose, 12)
-	stats.add_child(_label("Keep the title secret. %d guesses left." % (ATTEMPT_LIMITS[level_index] - guesses.size()), 13, MUTED))
+	stats.add_child(_label("%d guesses left · Keep the title secret" % (ATTEMPT_LIMITS[level_index] - guesses.size()), 14, MUTED))
 	_spacer(stats, true)
-	timer_label = _label(_format_time(elapsed), 13, MUTED)
+	timer_label = _label(_format_time(elapsed), 14, MUTED)
 	stats.add_child(timer_label)
 	if not message.is_empty():
 		compose.add_child(_paragraph(message, 13, CORAL))
