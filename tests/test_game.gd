@@ -1,5 +1,15 @@
 extends SceneTree
 
+class PreviewGame extends "res://scripts/main.gd":
+	func _load_game_data() -> void:
+		day_key = "2026-10-19"
+		_load_curated_board()
+	func _save_progress() -> void:
+		pass
+	func _fetch_latest_pool() -> void:
+		pass
+
+
 const Logic = preload("res://scripts/jev_logic.gd")
 const Builder = preload("res://scripts/level_builder.gd")
 
@@ -9,8 +19,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var scene := load("res://main.tscn")
-	var game = scene.instantiate()
+	var game = PreviewGame.new()
 	root.add_child(game)
 	await process_frame
 	assert(game.levels.size() == 7, "The daily run needs seven levels.")

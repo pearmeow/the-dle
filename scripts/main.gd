@@ -3,15 +3,15 @@ extends Control
 const JevLogic = preload("res://scripts/jev_logic.gd")
 const LevelBuilder = preload("res://scripts/level_builder.gd")
 
-const BG := Color("#09121d")
-const PANEL := Color("#111f2e")
-const PANEL_LIGHT := Color("#172a3a")
-const BORDER := Color("#294051")
-const TEXT := Color("#f4f4e8")
-const MUTED := Color("#9cafb8")
-const LIME := Color("#d9f583")
-const BLUE := Color("#88c7f1")
-const CORAL := Color("#fa9b82")
+const BG := Color("#f5efdf")
+const PANEL := Color("#faf5e9")
+const PANEL_LIGHT := Color("#eee4d0")
+const BORDER := Color("#c8bba3")
+const TEXT := Color("#28251f")
+const MUTED := Color("#736b5d")
+const LIME := Color("#747d42")
+const BLUE := Color("#6c8580")
+const CORAL := Color("#d96e58")
 
 const SAVE_PATH := "user://daily_save.json"
 const CURATED_PATH := "res://data/levels.json"
@@ -24,6 +24,7 @@ const WORD_LIMITS := [18, 16, 14, 12, 11, 9, 8]
 const ATTEMPT_LIMITS := [5, 5, 4, 4, 4, 3, 3]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
+var playtest_mode := false
 var catalog: Dictionary = {}
 var levels: Array = []
 var day_key := ""
@@ -50,6 +51,8 @@ var autosave_clock := 0.0
 var pool_games: Dictionary = {}
 var refresh_count := 0
 
+var heading_font: Font = preload("res://assets/Bitter-Bold.ttf")
+var body_font: Font = preload("res://assets/Lato-Regular.ttf")
 var http: HTTPRequest
 var pool_http: HTTPRequest
 var timer_label: Label
@@ -58,13 +61,17 @@ var hint_edit: LineEdit
 
 
 func _ready() -> void:
+	playtest_mode = OS.get_cmdline_user_args().has("--playtest")
+	if playtest_mode:
+		get_window().title = "Guess What I Mean! · Playtest"
 	jev_url = OS.get_environment("JEV_API_URL").strip_edges()
 	http = HTTPRequest.new()
 	http.timeout = 9.0
 	http.request_completed.connect(_on_http_completed)
 	add_child(http)
 	_load_game_data()
-	_load_daily_progress()
+	if not playtest_mode:
+		_load_daily_progress()
 	compact_layout = size.x < 1100.0
 	tiny_layout = size.x < 600.0
 	resized.connect(_on_resized)
@@ -287,6 +294,8 @@ func _load_daily_progress() -> void:
 
 
 func _save_progress() -> void:
+	if playtest_mode:
+		return
 	var record := {
 		"day": day_key,
 		"board_id": board_id,
@@ -494,7 +503,7 @@ func _format_time(seconds: float) -> String:
 
 func _render() -> void:
 	for child in get_children():
-		if child != http:
+		if child != http and child != pool_http:
 			remove_child(child)
 			child.queue_free()
 	timer_label = null
@@ -505,6 +514,13 @@ func _render() -> void:
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	var paper := TextureRect.new()
+	paper.texture = preload("res://assets/paper.svg")
+	paper.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	paper.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	paper.stretch_mode = TextureRect.STRETCH_TILE
+	paper.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(paper)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 16 if tiny_layout else 26)
@@ -525,41 +541,52 @@ func _render() -> void:
 	else:
 		body = _hbox(page, 16)
 		body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if not compact_layout and size.x >= 1100.0:
-		_build_sidebar(body)
 	_build_main(body)
 	_build_jev(body)
 	var footer := _hbox(page, 8)
-	footer.add_child(_label("GUESS WHAT I MEAN!", 11, MUTED))
+	footer.add_child(_label("Level %d of 7  ·  %s" % [level_index + 1, _current_level().get("theme", "Today’s mystery")], 13, MUTED))
 	_spacer(footer, true)
 	if data_source == "RAWG":
 		var attribution := _button("GAME DATA: RAWG ↗", false)
 		attribution.custom_minimum_size.y = 25
 		attribution.pressed.connect(func() -> void: OS.shell_open("https://rawg.io"))
 		footer.add_child(attribution)
-	elif not tiny_layout:
-		footer.add_child(_label("A DAILY GAME ABOUT SAYING JUST ENOUGH", 11, MUTED))
+	footer.add_child(_label("★  Score %s" % _total_score(), 17, TEXT, true))
 
 
 func _build_header(parent: BoxContainer) -> void:
-	var row := _hbox(parent, 10 if tiny_layout else 15)
-	row.custom_minimum_size.y = 64
-	var logo := _panel(row, LIME, LIME, 10, 0)
-	logo.custom_minimum_size = Vector2(50, 50) if tiny_layout else Vector2(60, 60)
-	var logo_text := _label("GW\nIM", 17, BG)
-	logo_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	logo_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	logo.add_child(logo_text)
-	var title_box := _vbox(row, 0)
-	title_box.add_child(_label("GUESS WHAT I MEAN!", 22 if tiny_layout else 28, TEXT, true))
-	title_box.add_child(_label("THE DAILY AI GUESSING GAME", 11, MUTED))
+	var row := _hbox(parent, 20)
+	row.custom_minimum_size.y = 54
+	row.add_child(_label("Guess What I Mean!", 22 if tiny_layout else 27, TEXT, true))
 	_spacer(row, true)
 	if not tiny_layout:
 		var date := Time.get_date_dict_from_system()
-		var date_panel := _panel(row, PANEL, BORDER, 10, 12)
-		var date_box := _vbox(date_panel, 1)
-		date_box.add_child(_label("TODAY'S RUN", 10, LIME, true))
-		date_box.add_child(_label("%s %02d  ·  %d / 7" % [MONTHS[date.month - 1], date.day, level_index + 1], 15, TEXT, true))
+		row.add_child(_label("%s %d" % [MONTHS[date.month - 1].capitalize(), date.day], 14, MUTED))
+	var help := _button("?", false)
+	help.tooltip_text = "How to play"
+	help.pressed.connect(_show_help)
+	row.add_child(help)
+	var steps := _hbox(parent, 8 if tiny_layout else 14)
+	for i in range(levels.size()):
+		var marker := _panel(steps, LIME if i < results.size() else (CORAL if i == level_index else PANEL), BORDER, 24, 6)
+		marker.custom_minimum_size = Vector2(32, 32)
+		var number := _label("✓" if i < results.size() else str(i + 1), 13, PANEL if i < results.size() else TEXT)
+		number.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		marker.add_child(number)
+		if i < levels.size() - 1:
+			var line := HSeparator.new()
+			line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			steps.add_child(line)
+
+func _show_help() -> void:
+	var dialog := AcceptDialog.new()
+	dialog.title = "How to play"
+	dialog.dialog_text = "Pick a secret game. Jev sees the options, but never your choice.\n\nWrite a distinctive clue without using the title or list position.\nAfter each guess, try a new detail if Jev misses.\n\nFewer clues, fewer words, and less active time earn more points.\nSeven levels make up today's run."
+	add_child(dialog)
+	dialog.confirmed.connect(dialog.queue_free)
+	dialog.canceled.connect(dialog.queue_free)
+	dialog.popup_centered(Vector2i(520, 300))
 
 
 func _build_sidebar(parent: BoxContainer) -> void:
@@ -595,13 +622,11 @@ func _build_sidebar(parent: BoxContainer) -> void:
 
 
 func _build_main(parent: BoxContainer) -> void:
-	var panel := _panel(parent, PANEL, BORDER, 18, 12 if tiny_layout else (18 if compact_layout else 25))
-	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size.x = 450 if not compact_layout else 0
+	var box := _vbox(parent, 12)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	if compact_layout:
-		panel.custom_minimum_size.y = 680
-	var box := _vbox(panel, 14)
+		box.custom_minimum_size.y = 650
 	if levels.is_empty():
 		box.add_child(_label("Level data could not be loaded.", 22, CORAL))
 		return
@@ -613,140 +638,153 @@ func _build_main(parent: BoxContainer) -> void:
 
 
 func _build_select(box: BoxContainer) -> void:
-	var level := _current_level()
-	box.add_child(_label("LEVEL %02d / 07   •   SELECT YOUR SECRET" % [level_index + 1], 12, LIME, true))
-	box.add_child(_paragraph(String(level.get("theme", "Today's challenge")), 28 if tiny_layout else 34, TEXT))
-	box.add_child(_paragraph(String(level.get("note", "Choose a game and guide Jev to it.")), 15, MUTED))
-	var rules := _hbox(box, 10)
-	rules.add_child(_chip("%d CANDIDATES" % _current_ids().size(), BLUE))
-	rules.add_child(_chip("%d GUESSES" % ATTEMPT_LIMITS[level_index], LIME))
-	rules.add_child(_chip("%d WORDS / HINT" % WORD_LIMITS[level_index], CORAL))
-	if data_source == "RAWG" and level_index == 0 and results.is_empty() and target_id.is_empty() and hints.is_empty():
-		_gap(box, 3)
-		var refresh_row := _hbox(box, 10)
-		var remaining := MAX_REFRESHES - refresh_count
-		var refresh_text := "RESHUFFLE BOARD  (%d LEFT)" % remaining if remaining > 0 else "NO RESHUFFLES LEFT"
-		var refresh_btn := _button(refresh_text, false)
-		refresh_btn.disabled = not _can_refresh()
-		if _can_refresh():
-			refresh_btn.pressed.connect(_refresh_board)
-		refresh_row.add_child(refresh_btn)
-		_spacer(refresh_row, true)
-		var caption := "Shuffle today's games before you pick level 1. Score still counts."
-		if remaining == 0:
-			caption = "You already used both reshuffles. Pick a game to start."
-		refresh_row.add_child(_label(caption, 11, MUTED))
-	_gap(box, 5)
-	box.add_child(_label("CHOOSE ONE GAME", 11, MUTED, true))
-	var scroller := ScrollContainer.new()
-	scroller.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroller.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	box.add_child(scroller)
-	var grid := GridContainer.new()
-	grid.columns = 1 if compact_layout else 2
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroller.add_child(grid)
+	box.add_child(_label("Pick your secret.", 34 if tiny_layout else 48, TEXT, true))
+	box.add_child(_paragraph("%s games. One hidden answer. Make Jev guess yours." % _current_ids().size(), 17, MUTED))
+	_build_cards(box, true)
+	var note := _panel(box, PANEL, BORDER, 4, 18)
+	var note_box := _vbox(note, 8)
+	note_box.add_child(_label("What would give it away?", 23, TEXT, true))
+	note_box.add_child(_paragraph("Choose a card above, then describe a distinctive feature.", 15, MUTED))
+	note_box.add_child(_paragraph("Keep the title secret. You have %d guesses and %d words per clue." % [ATTEMPT_LIMITS[level_index], WORD_LIMITS[level_index]], 13, MUTED))
+	if _can_refresh():
+		var refresh := _button("Reshuffle board · %d left" % (MAX_REFRESHES - refresh_count), false)
+		refresh.pressed.connect(_refresh_board)
+		box.add_child(refresh)
+
+func _cover_index(game: Dictionary) -> int:
+	var words := (String(game.get("name", "")) + " " + String(game.get("genre", ""))).to_lower()
+	for feature in game.get("features", []):
+		if not "steam" in String(feature).to_lower():
+			words += " " + String(feature).to_lower()
+	if "horror" in words or "evil" in words or "dark souls" in words:
+		return 0
+	if "war" in words or "racing" in words or "shooter" in words or "fps" in words:
+		return 1
+	if "space" in words or "alien" in words or "outer" in words or "sci-fi" in words:
+		return 3
+	if "puzzle" in words or "deckbuilding" in words or "tetris" in words:
+		return 5
+	if "rpg" in words or "fantasy" in words or "knight" in words:
+		return 2
+	return 4
+
+func _card_caption(game: Dictionary) -> String:
+	var blurb := String(game.get("blurb", ""))
+	if not blurb.is_empty() and not blurb.begins_with("Gameplay tags:"):
+		return blurb
+	var useful: Array = []
+	for feature in game.get("features", []):
+		var word := String(feature).replace("-", " ")
+		if "steam" in word.to_lower() or "controller" in word.to_lower() or "workshop" in word.to_lower() or "leaderboard" in word.to_lower():
+			continue
+		useful.append(word.capitalize())
+		if useful.size() == 2:
+			break
+	return String(game.get("genre", "Video game")) + (" · " + " / ".join(useful) if not useful.is_empty() else "")
+
+func _build_cards(box: BoxContainer, selectable: bool) -> void:
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.custom_minimum_size.y = 330 if selectable else 240
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(scroll)
+	var row := _hbox(scroll, 12)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var candidates := _candidates()
+	var width := clampf((size.x - (70 if compact_layout else 340) - (candidates.size() - 1) * 12) / max(1, candidates.size()), 156, 250)
 	for i in range(candidates.size()):
 		var game: Dictionary = candidates[i]
-		var feature := String(game.get("features", ["distinctive gameplay"])[0])
-		var title := String(game.get("name", "Game"))
-		var caption := String(game.get("genre", "Video game")) + "  ·  " + feature
-		if tiny_layout:
-			if title.length() > 25:
-				title = title.substr(0, 24) + "…"
-			caption = String(game.get("genre", "Video game"))
-		var button := _button("%02d   %s\n        %s" % [i + 1, title, caption], false)
-		button.custom_minimum_size = Vector2(0 if compact_layout else 310, 82 if tiny_layout else 101)
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.clip_text = true
-		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		button.pressed.connect(_choose_target.bind(String(game["id"])))
-		grid.add_child(button)
-	box.add_child(_label("Jev gets this list, but your selection stays secret.", 12, MUTED))
+		var selected := String(game["id"]) == target_id
+		var card := _panel(row, PANEL, CORAL if selected else BORDER, 5, 7)
+		card.custom_minimum_size.x = width
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		if selected:
+			card.add_theme_stylebox_override("panel", _style(PANEL, CORAL, 5, 3, 7))
+		var content := _vbox(card, 6)
+		var artwork := TextureRect.new()
+		var atlas := AtlasTexture.new()
+		var sheet: Texture2D = preload("res://assets/covers.png")
+		atlas.atlas = sheet
+		var tile := sheet.get_size() / Vector2(3, 2)
+		var index := _cover_index(game)
+		atlas.region = Rect2(Vector2(index % 3, floori(index / 3.0)) * tile, tile)
+		artwork.texture = atlas
+		artwork.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		artwork.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		artwork.custom_minimum_size = Vector2(width - 14, 180 if selectable else 110)
+		artwork.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		content.add_child(artwork)
+		var title := _paragraph(String(game["name"]), 15, TEXT)
+		title.add_theme_font_override("font", heading_font)
+		title.custom_minimum_size.x = width - 14
+		title.max_lines_visible = 2
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		content.add_child(title)
+		var caption := _paragraph(_card_caption(game), 12, MUTED)
+		caption.max_lines_visible = 3 if selectable else 2
+		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		content.add_child(caption)
+		if selected:
+			content.add_child(_label("YOUR SECRET", 11, CORAL, true))
+		if selectable:
+			var choose := _button("%02d   Choose this game" % [i + 1], false)
+			choose.add_theme_font_size_override("font_size", 12)
+			choose.pressed.connect(_choose_target.bind(String(game["id"])))
+			content.add_child(choose)
+			card.gui_input.connect(func(event: InputEvent) -> void:
+				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					_choose_target(String(game["id"]))
+			)
+			for child in content.get_children():
+				if not child is Button:
+					child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			card.tooltip_text = "Keep " + String(game["name"]) + " secret from Jev"
 
 
 func _build_hint(box: BoxContainer) -> void:
-	var level := _current_level()
-	box.add_child(_label("LEVEL %02d / 07   •   HINT %d OF %d" % [level_index + 1, hints.size() + (0 if stage == "thinking" else 1), ATTEMPT_LIMITS[level_index]], 12, LIME, true))
-	box.add_child(_label("Give Jev a clue." if tiny_layout else "Make Jev think of your game.", 26 if tiny_layout else 30, TEXT, true))
-	box.add_child(_paragraph(String(level.get("note", "Use what makes it distinctive.")), 14, MUTED))
-	var secret := _panel(box, PANEL_LIGHT, LIME, 12, 16)
-	var secret_row := _hbox(secret, 12)
-	var mark := _label("✦", 22, LIME)
-	secret_row.add_child(mark)
-	var secret_text := _vbox(secret_row, 2)
-	secret_text.add_child(_label("YOUR SECRET GAME", 10, LIME, true))
-	var secret_name := _label(_game_name(target_id), 19, TEXT, true)
-	secret_name.clip_text = true
-	secret_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	secret_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	secret_text.add_child(secret_name)
-	_spacer(secret_row, true)
-	if not compact_layout:
-		secret_row.add_child(_label("ONLY YOU SEE THIS", 10, MUTED, true))
-	var stats := _hbox(box, 10)
-	stats.add_child(_chip("%d / %d GUESSES" % [guesses.size(), ATTEMPT_LIMITS[level_index]], BLUE))
-	stats.add_child(_chip("%d WORD MAX" % WORD_LIMITS[level_index], CORAL))
-	timer_label = _label(_format_time(elapsed), 14, TEXT, true)
-	stats.add_child(timer_label)
-	_gap(box, 3)
-	if stage == "thinking":
-		var thinking := _panel(box, LIME, LIME, 12, 16)
-		thinking.add_child(_label("JEV IS THINKING…", 16, BG, true))
-	else:
-		var composer := _panel(box, PANEL_LIGHT, BLUE, 12, 16)
-		var compose_box := _vbox(composer, 9)
-		compose_box.add_child(_label("TYPE HINT %02d  /  BE SPECIFIC. BE BRIEF." % [hints.size() + 1], 12, LIME, true))
+	box.add_child(_label("What would give it away?", 29 if tiny_layout else 40, TEXT, true))
+	box.add_child(_paragraph("Your secret is %s. Help Jev find it." % _game_name(target_id), 16, MUTED))
+	_build_cards(box, false)
+	var composer := _panel(box, PANEL, BORDER, 5, 18)
+	var compose := _vbox(composer, 9)
+	compose.add_child(_label("Jev is following your clues…" if stage == "thinking" else "A little detail. A big revelation.", 23, TEXT, true))
+	if stage != "thinking":
 		hint_edit = LineEdit.new()
-		hint_edit.placeholder_text = "Describe a standout feature" if tiny_layout else "e.g. Build a shelter beneath an alien ocean"
+		hint_edit.placeholder_text = "Describe a distinctive feature…"
 		hint_edit.text = hint_draft
-		hint_edit.custom_minimum_size.y = 50
+		hint_edit.custom_minimum_size.y = 52
+		hint_edit.add_theme_font_override("font", body_font)
 		hint_edit.add_theme_font_size_override("font_size", 17)
 		hint_edit.add_theme_color_override("font_color", TEXT)
 		hint_edit.add_theme_color_override("font_placeholder_color", MUTED)
-		hint_edit.add_theme_stylebox_override("normal", _style(BG, BLUE, 8, 2, 10))
-		hint_edit.add_theme_stylebox_override("focus", _style(BG, LIME, 8, 2, 10))
+		hint_edit.add_theme_stylebox_override("normal", _style(Color("#fffdf7"), BORDER, 6, 1, 12))
+		hint_edit.add_theme_stylebox_override("focus", _style(Color("#fffdf7"), CORAL, 6, 2, 12))
 		hint_edit.text_changed.connect(_on_hint_changed)
 		hint_edit.text_submitted.connect(func(_value: String) -> void: _submit_hint())
-		compose_box.add_child(hint_edit)
-		var compose_footer := _hbox(compose_box, 10)
-		count_label = _label("%d / %d words" % [JevLogic.word_count(hint_draft), WORD_LIMITS[level_index]], 12, MUTED)
-		compose_footer.add_child(count_label)
-		_spacer(compose_footer, true)
-		var submit := _button("SEND HINT  →", true)
+		compose.add_child(hint_edit)
+	var bottom := _hbox(compose, 12)
+	count_label = _label("%d / %d words" % [JevLogic.word_count(hint_draft), WORD_LIMITS[level_index]], 13, MUTED)
+	bottom.add_child(count_label)
+	_spacer(bottom, true)
+	if stage != "thinking":
+		var submit := _button("Send clue →", true)
 		submit.pressed.connect(_submit_hint)
-		compose_footer.add_child(submit)
-		if not message.is_empty():
-			compose_box.add_child(_label(message, 12, CORAL))
-		if hint_draft.is_empty():
-			call_deferred("_focus_current_hint")
-	box.add_child(_label("JEV'S OPTIONS", 11, MUTED, true))
-	var options_scroll := ScrollContainer.new()
-	options_scroll.custom_minimum_size.y = 110
-	options_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	options_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	box.add_child(options_scroll)
-	var options := GridContainer.new()
-	options.columns = 1 if compact_layout else 2
-	options.add_theme_constant_override("h_separation", 9)
-	options.add_theme_constant_override("v_separation", 9)
-	options.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	options_scroll.add_child(options)
-	var prior := []
-	for guess in guesses:
-		prior.append(guess.get("id", ""))
-	for game in _candidates():
-		var item := _panel(options, PANEL_LIGHT, BORDER, 9, 12)
-		item.custom_minimum_size = Vector2(0 if compact_layout else 300, 49)
-		var name_color := MUTED if prior.has(game["id"]) else TEXT
-		var option_name := _paragraph(String(game["name"]) + ("  ·  GUESSED" if prior.has(game["id"]) else ""), 13, name_color)
-		option_name.custom_minimum_size.x = 120
-		item.add_child(option_name)
-	box.add_child(_label("Describe the game without its title or list position.", 11, MUTED))
+		bottom.add_child(submit)
+	var stats := _hbox(compose, 12)
+	stats.add_child(_label("Keep the title secret. %d guesses left." % (ATTEMPT_LIMITS[level_index] - guesses.size()), 13, MUTED))
+	_spacer(stats, true)
+	timer_label = _label(_format_time(elapsed), 13, MUTED)
+	stats.add_child(timer_label)
+	if not message.is_empty():
+		compose.add_child(_paragraph(message, 13, CORAL))
+	if stage == "hint":
+		call_deferred("_focus_current_hint")
 
 
 func _focus_current_hint() -> void:
@@ -803,58 +841,51 @@ func _build_complete(box: BoxContainer) -> void:
 
 
 func _build_jev(parent: BoxContainer) -> void:
-	var panel := _panel(parent, PANEL, BORDER, 16, 20)
-	panel.custom_minimum_size.x = 295 if not compact_layout else 0
-	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	if compact_layout:
-		panel.custom_minimum_size.y = 260
-	var box := _vbox(panel, 13)
-	var intro := _hbox(box, 12)
-	var avatar := _panel(intro, BLUE, BLUE, 10, 0)
-	avatar.custom_minimum_size = Vector2(45, 45)
-	var initial := _label("J", 22, BG, true)
-	initial.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	initial.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	avatar.add_child(initial)
-	var title := _vbox(intro, 0)
-	title.add_child(_label("JEV", 19, TEXT, true))
-	title.add_child(_label("YOUR GUESSING PARTNER", 10, MUTED))
-	var mode_text := "OFFLINE FALLBACK" if remote_failed else ("MODEL CONNECTED" if used_remote else ("MODEL ENDPOINT SET" if not jev_url.is_empty() else "OFFLINE MODE"))
-	box.add_child(_chip(mode_text, BLUE))
-	if stage == "select":
-		_gap(box, 8)
-		box.add_child(_label("How it works", 21, TEXT, true))
-		_add_step(box, "01", "Pick a game", "Your choice stays hidden from Jev.")
-		_add_step(box, "02", "Write a hint", "Name a standout feature.")
-		_add_step(box, "03", "Read the guess", "Adapt your next hint if Jev misses.")
-		_spacer(box, false)
-		box.add_child(_label("Jev sees the list and your hints.", 12, MUTED))
-		return
-	box.add_child(_label("GUESS LOG", 11, LIME, true))
-	if guesses.is_empty():
-		var waiting := _panel(box, PANEL_LIGHT, BORDER, 11, 15)
-		waiting.add_child(_label("Jev is waiting for your first clue…" if stage != "thinking" else "Analyzing your hint…", 14, MUTED))
-	else:
-		var log_scroll := ScrollContainer.new()
-		log_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		log_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		box.add_child(log_scroll)
-		var log := _vbox(log_scroll, 10)
+	var box := _vbox(parent, 10)
+	box.custom_minimum_size.x = 235 if not compact_layout else 0
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var bubble := _panel(box, PANEL, BORDER, 22, 17)
+	var speech := "A secret?\nI'm listening."
+	if stage == "thinking":
+		speech = "Hmm… let me follow that clue."
+	elif stage == "won":
+		speech = "Aha! Case closed."
+	elif stage == "lost":
+		speech = "You stumped me! Another case?"
+	elif not guesses.is_empty():
+		speech = "My hunch: %s?" % _game_name(String(guesses.back().get("id", "")))
+	elif stage == "hint":
+		speech = "What's your first clue?"
+	bubble.add_child(_paragraph(speech, 21, TEXT))
+	var portrait := TextureRect.new()
+	var jev_art := AtlasTexture.new()
+	jev_art.atlas = preload("res://assets/jev.png")
+	jev_art.region = Rect2(0, 220, 1024, 1120)
+	portrait.texture = jev_art
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.custom_minimum_size.y = 220 if compact_layout else 290
+	portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(portrait)
+	box.add_child(_label("Jev · your guessing detective", 13, TEXT, true))
+	var mode := "Offline clue matcher" if jev_url.is_empty() else ("Offline fallback" if remote_failed else "AI guessing partner")
+	box.add_child(_label(mode, 11, MUTED))
+	if not guesses.is_empty():
+		var scroll := ScrollContainer.new()
+		scroll.custom_minimum_size.y = 160
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		box.add_child(scroll)
+		var log := _vbox(scroll, 8)
 		log.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for i in range(guesses.size()):
 			var guess: Dictionary = guesses[i]
-			var card := _panel(log, PANEL_LIGHT, LIME if guess.get("correct", false) else BORDER, 10, 13)
-			var card_box := _vbox(card, 5)
-			card_box.add_child(_label("GUESS %02d  •  %s" % [i + 1, "CORRECT" if guess.get("correct", false) else "NOPE"], 10, LIME if guess.get("correct", false) else CORAL, true))
-			card_box.add_child(_label(_game_name(String(guess.get("id", ""))), 17, TEXT, true))
+			log.add_child(_paragraph("%d. %s%s" % [i + 1, _game_name(String(guess.get("id", ""))), " ✓" if guess.get("correct", false) else " · missed"], 14, LIME if guess.get("correct", false) else TEXT))
 			if level_index <= 2:
-				card_box.add_child(_label(String(guess.get("reason", "")), 12, MUTED))
-			elif level_index <= 4:
-				card_box.add_child(_label("That is my best read so far.", 12, MUTED))
-	if stage == "hint" and not guesses.is_empty():
-		box.add_child(_label("Try a feature that separates your game from that guess.", 12, MUTED))
-	elif stage == "complete":
-		box.add_child(_label("A new daily board appears tomorrow.", 12, MUTED))
+				log.add_child(_paragraph(String(guess.get("reason", "")), 12, MUTED))
+	else:
+		box.add_child(_paragraph("I see the games and your clues. Your choice stays with you.", 13, MUTED))
 
 
 func _add_step(parent: BoxContainer, number: String, heading: String, detail: String) -> void:
@@ -905,26 +936,25 @@ func _button(value: String, primary: bool) -> Button:
 	var button := Button.new()
 	button.text = value
 	button.custom_minimum_size.y = 42
-	button.add_theme_font_size_override("font_size", 14)
-	button.add_theme_color_override("font_color", BG if primary else TEXT)
-	button.add_theme_color_override("font_hover_color", BG if primary else LIME)
-	button.add_theme_color_override("font_pressed_color", BG)
-	button.add_theme_stylebox_override("normal", _style(LIME if primary else PANEL_LIGHT, LIME if primary else BORDER, 9, 1, 13))
-	button.add_theme_stylebox_override("hover", _style(Color("#eafcae") if primary else Color("#223a4a"), LIME, 9, 1, 13))
-	button.add_theme_stylebox_override("pressed", _style(BLUE, BLUE, 9, 1, 13))
-	button.add_theme_stylebox_override("focus", _style(Color.TRANSPARENT, LIME, 9, 2, 13))
+	button.add_theme_font_override("font", body_font)
+	button.add_theme_font_size_override("font_size", 15)
+	button.add_theme_color_override("font_color", PANEL if primary else TEXT)
+	button.add_theme_color_override("font_hover_color", PANEL if primary else CORAL)
+	button.add_theme_color_override("font_pressed_color", PANEL)
+	button.add_theme_stylebox_override("normal", _style(CORAL if primary else PANEL, CORAL if primary else BORDER, 6, 1, 12))
+	button.add_theme_stylebox_override("hover", _style(Color("#c65e49") if primary else Color("#eee1ca"), CORAL, 6, 2, 12))
+	button.add_theme_stylebox_override("pressed", _style(CORAL, CORAL, 6, 2, 12))
+	button.add_theme_stylebox_override("focus", _style(Color.TRANSPARENT, CORAL, 6, 2, 12))
 	return button
 
 
 func _label(value: String, font_size: int, color: Color, bold: bool = false) -> Label:
 	var label := Label.new()
 	label.text = value
+	label.add_theme_font_override("font", heading_font if bold or font_size >= 28 else body_font)
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.add_theme_color_override("font_color", color)
 	label.add_theme_font_size_override("font_size", font_size)
-	if bold:
-		label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.17))
-		label.add_theme_constant_override("shadow_offset_y", 1)
 	return label
 
 

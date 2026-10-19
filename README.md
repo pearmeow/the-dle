@@ -20,6 +20,12 @@ Later levels have more similar candidates, shorter per-hint word limits, fewer g
 
 Offline Jev is a deterministic clue matcher. It scores words and phrases against candidate features, favors details that are rare among the current options, and avoids prior guesses. It never receives the selected target. For real model guesses, use the optional server below.
 
+## Fresh UI playtest
+
+Run `godot --path . -- --playtest` for a fresh run without reading or writing daily progress. The window is labeled **Playtest**. Close it when finished. Normal launches continue using the daily save.
+
+The tabletop interface uses original genre artwork rather than official game covers. Artwork prompts and font license information are in `assets/ARTWORK.md`.
+
 ## Use a model for Jev
 
 The included Python server calls [TypeSafe's Jev API](https://docs.typesafe.ai/api) with a [Choice question](https://docs.typesafe.ai/primitives/choice) over the unguessed games. Jev returns a game ID, not generated prose, so the game supplies a short fixed line beneath the guess. The API key stays in the server process. Godot sends only the candidate list, hints, and previous guesses; it checks the selected target locally.
