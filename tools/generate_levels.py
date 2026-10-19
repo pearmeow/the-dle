@@ -156,6 +156,7 @@ def main() -> None:
         parser.error("Set RAWG_API_KEY in the environment.")
     try:
         pool = fetch_games(key, args.pages)
+        pool.sort(key=lambda game: game["id"])
         board = generate(pool, day)
     except Exception as exc:
         raise SystemExit("Level generation failed: " + type(exc).__name__) from None

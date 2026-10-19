@@ -1,6 +1,7 @@
 extends Control
 
 const JevLogic = preload("res://scripts/jev_logic.gd")
+const LevelBuilder = preload("res://scripts/level_builder.gd")
 
 const BG := Color("#09121d")
 const PANEL := Color("#111f2e")
@@ -15,6 +16,10 @@ const CORAL := Color("#fa9b82")
 const SAVE_PATH := "user://daily_save.json"
 const CURATED_PATH := "res://data/levels.json"
 const GENERATED_PATH := "res://data/generated_levels.json"
+const BUNDLED_POOL := "res://data/daily_pool.json"
+const POOL_CACHE := "user://daily_pool.json"
+const POOL_URL := "https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json"
+const MAX_REFRESHES := 2
 const WORD_LIMITS := [18, 16, 14, 12, 11, 9, 8]
 const ATTEMPT_LIMITS := [5, 5, 4, 4, 4, 3, 3]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
@@ -42,8 +47,11 @@ var compact_layout := false
 var tiny_layout := false
 var data_source := "CURATED"
 var autosave_clock := 0.0
+var pool_games: Dictionary = {}
+var refresh_count := 0
 
 var http: HTTPRequest
+var pool_http: HTTPRequest
 var timer_label: Label
 var count_label: Label
 var hint_edit: LineEdit
@@ -61,6 +69,7 @@ func _ready() -> void:
 	tiny_layout = size.x < 600.0
 	resized.connect(_on_resized)
 	_render()
+	_fetch_latest_pool()
 
 
 func _process(delta: float) -> void:
@@ -86,26 +95,156 @@ func _on_resized() -> void:
 func _load_game_data() -> void:
 	var date := Time.get_date_dict_from_system()
 	day_key = "%04d-%02d-%02d" % [date.year, date.month, date.day]
-	var source := CURATED_PATH
-	if FileAccess.file_exists(GENERATED_PATH):
-		var generated_file := FileAccess.open(GENERATED_PATH, FileAccess.READ)
-		if generated_file != null:
-			var generated = JSON.parse_string(generated_file.get_as_text())
-			if typeof(generated) == TYPE_DICTIONARY and generated.get("generated_for", "") == day_key:
-				source = GENERATED_PATH
-	var file := FileAccess.open(source, FileAccess.READ)
+	# Preference order: freshly cached RAWG pool -> pool shipped with
+	# the build (if CI committed one at export time) -> legacy
+	# generated_levels.json -> hard-coded curated board.
+	if _try_load_pool_board(POOL_CACHE):
+		return
+	if _try_load_pool_board(BUNDLED_POOL):
+		return
+	if _try_load_legacy_generated():
+		return
+	_load_curated_board()
+
+
+func _try_load_pool_board(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		push_error("Cannot open level catalog: " + source)
+		return false
+	var data = JSON.parse_string(file.get_as_text())
+	if typeof(data) != TYPE_DICTIONARY:
+		return false
+	if String(data.get("generated_for", "")) != day_key:
+		return false
+	var games_dict: Dictionary = data.get("games", {})
+	if games_dict.is_empty():
+		return false
+	var pack := LevelBuilder.build_pack(games_dict, day_key + "#" + str(refresh_count))
+	if pack.is_empty():
+		return false
+	pool_games = games_dict
+	catalog = games_dict
+	levels = pack
+	pack_index = 0
+	data_source = "RAWG"
+	board_id = "pool:" + day_key + ":v" + str(refresh_count)
+	return true
+
+
+func _try_load_legacy_generated() -> bool:
+	if not FileAccess.file_exists(GENERATED_PATH):
+		return false
+	var file := FileAccess.open(GENERATED_PATH, FileAccess.READ)
+	if file == null:
+		return false
+	var data = JSON.parse_string(file.get_as_text())
+	if typeof(data) != TYPE_DICTIONARY:
+		return false
+	if data.get("generated_for", "") != day_key:
+		return false
+	if not data.has("games") or not data.has("packs"):
+		return false
+	catalog = data["games"]
+	data_source = String(data.get("source", "CURATED"))
+	pack_index = posmod(_day_number(day_key), data["packs"].size())
+	levels = data["packs"][pack_index]
+	board_id = str(JSON.stringify(data).hash()) + ":" + str(pack_index)
+	return true
+
+
+func _load_curated_board() -> void:
+	var file := FileAccess.open(CURATED_PATH, FileAccess.READ)
+	if file == null:
+		push_error("Cannot open level catalog: " + CURATED_PATH)
 		return
 	var data = JSON.parse_string(file.get_as_text())
 	if typeof(data) != TYPE_DICTIONARY or not data.has("games") or not data.has("packs"):
-		push_error("Invalid level catalog: " + source)
+		push_error("Invalid level catalog: " + CURATED_PATH)
 		return
 	catalog = data["games"]
 	data_source = String(data.get("source", "CURATED"))
 	pack_index = posmod(_day_number(day_key), data["packs"].size())
 	levels = data["packs"][pack_index]
 	board_id = str(JSON.stringify(data).hash()) + ":" + str(pack_index)
+
+
+func _fetch_latest_pool() -> void:
+	if pool_http != null and is_instance_valid(pool_http):
+		return
+	pool_http = HTTPRequest.new()
+	pool_http.timeout = 8.0
+	pool_http.request_completed.connect(_on_pool_fetched)
+	add_child(pool_http)
+	var err := pool_http.request(POOL_URL)
+	if err != OK:
+		pool_http.queue_free()
+		pool_http = null
+
+
+func _on_pool_fetched(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if pool_http != null and is_instance_valid(pool_http):
+		pool_http.queue_free()
+	pool_http = null
+	if result != HTTPRequest.RESULT_SUCCESS or code != 200:
+		return
+	var text := body.get_string_from_utf8()
+	var data = JSON.parse_string(text)
+	if typeof(data) != TYPE_DICTIONARY:
+		return
+	if String(data.get("generated_for", "")) != day_key:
+		return
+	var cache := FileAccess.open(POOL_CACHE, FileAccess.WRITE)
+	if cache != null:
+		cache.store_string(text)
+	# Only replace the board if the player has not committed to the
+	# current run yet; otherwise leave today's game in progress alone.
+	if not _can_rebuild_board():
+		return
+	var games_dict: Dictionary = data.get("games", {})
+	if games_dict.is_empty():
+		return
+	var pack := LevelBuilder.build_pack(games_dict, day_key + "#" + str(refresh_count))
+	if pack.is_empty():
+		return
+	pool_games = games_dict
+	catalog = games_dict
+	levels = pack
+	data_source = "RAWG"
+	board_id = "pool:" + day_key + ":v" + str(refresh_count)
+	_save_progress()
+	_render()
+
+
+func _can_rebuild_board() -> bool:
+	return stage == "select" \
+		and level_index == 0 \
+		and results.is_empty() \
+		and target_id.is_empty() \
+		and hints.is_empty()
+
+
+func _can_refresh() -> bool:
+	return data_source == "RAWG" \
+		and refresh_count < MAX_REFRESHES \
+		and not pool_games.is_empty() \
+		and _can_rebuild_board()
+
+
+func _refresh_board() -> void:
+	if not _can_refresh():
+		return
+	refresh_count += 1
+	var pack := LevelBuilder.build_pack(pool_games, day_key + "#" + str(refresh_count))
+	if pack.is_empty():
+		refresh_count -= 1
+		return
+	levels = pack
+	board_id = "pool:" + day_key + ":v" + str(refresh_count)
+	message = ""
+	_save_progress()
+	_render()
 
 
 func _load_daily_progress() -> void:
@@ -132,6 +271,14 @@ func _load_daily_progress() -> void:
 	guesses = saved.get("guesses", [])
 	results = saved.get("results", [])
 	elapsed = float(saved.get("elapsed", 0.0))
+	refresh_count = clampi(int(saved.get("refresh_count", 0)), 0, MAX_REFRESHES)
+	# Rebuild today's board with the saved variant so the player sees
+	# the same shuffle they committed to before quitting.
+	if data_source == "RAWG" and refresh_count > 0 and not pool_games.is_empty():
+		var variant_pack := LevelBuilder.build_pack(pool_games, day_key + "#" + str(refresh_count))
+		if not variant_pack.is_empty():
+			levels = variant_pack
+			board_id = "pool:" + day_key + ":v" + str(refresh_count)
 	if stage == "hint" and not _current_ids().has(target_id):
 		stage = "select"
 		target_id = ""
@@ -152,7 +299,8 @@ func _save_progress() -> void:
 		"results": results,
 		"elapsed": elapsed,
 		"streak": streak,
-		"last_completed_day": last_completed_day
+		"last_completed_day": last_completed_day,
+		"refresh_count": refresh_count
 	}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
@@ -473,6 +621,21 @@ func _build_select(box: BoxContainer) -> void:
 	rules.add_child(_chip("%d CANDIDATES" % _current_ids().size(), BLUE))
 	rules.add_child(_chip("%d GUESSES" % ATTEMPT_LIMITS[level_index], LIME))
 	rules.add_child(_chip("%d WORDS / HINT" % WORD_LIMITS[level_index], CORAL))
+	if data_source == "RAWG" and level_index == 0 and results.is_empty() and target_id.is_empty() and hints.is_empty():
+		_gap(box, 3)
+		var refresh_row := _hbox(box, 10)
+		var remaining := MAX_REFRESHES - refresh_count
+		var refresh_text := "RESHUFFLE BOARD  (%d LEFT)" % remaining if remaining > 0 else "NO RESHUFFLES LEFT"
+		var refresh_btn := _button(refresh_text, false)
+		refresh_btn.disabled = not _can_refresh()
+		if _can_refresh():
+			refresh_btn.pressed.connect(_refresh_board)
+		refresh_row.add_child(refresh_btn)
+		_spacer(refresh_row, true)
+		var caption := "Shuffle today's games before you pick level 1. Score still counts."
+		if remaining == 0:
+			caption = "You already used both reshuffles. Pick a game to start."
+		refresh_row.add_child(_label(caption, 11, MUTED))
 	_gap(box, 5)
 	box.add_child(_label("CHOOSE ONE GAME", 11, MUTED, true))
 	var scroller := ScrollContainer.new()

@@ -1,0 +1,58 @@
+name: Daily game pool
+
+# Builds the day's RAWG pool and commits it to the naxin branch. The
+# game client fetches data/daily_pool.json over HTTP at startup and
+# composes the 7 levels locally with scripts/level_builder.gd.
+#
+# RAWG_API_KEY is a repository secret (Settings -> Secrets and
+# variables -> Actions). It is never written to the repo or exposed
+# to any client.
+
+on:
+  schedule:
+    # 04:05 UTC ~ 00:05 US-Eastern. Pick any cadence you prefer.
+    - cron: "5 4 * * *"
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Date to generate for (YYYY-MM-DD). Leave empty for today."
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout naxin
+        uses: actions/checkout@v4
+        with:
+          ref: naxin
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Fetch today's RAWG pool
+        env:
+          RAWG_API_KEY: ${{ secrets.RAWG_API_KEY }}
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            python tools/fetch_pool.py --date "${{ github.event.inputs.date }}" --pages 10
+          else
+            python tools/fetch_pool.py --pages 10
+          fi
+
+      - name: Commit updated pool
+        run: |
+          git config user.name  "pool-bot"
+          git config user.email "pool-bot@users.noreply.github.com"
+          git add data/daily_pool.json
+          if git diff --cached --quiet; then
+            echo "No pool changes to commit."
+          else
+            git commit -m "chore: daily pool $(date -u +%F)"
+            git push origin naxin
+          fi

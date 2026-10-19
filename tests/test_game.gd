@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Logic = preload("res://scripts/jev_logic.gd")
+const Builder = preload("res://scripts/level_builder.gd")
 
 
 func _initialize() -> void:
@@ -23,6 +24,7 @@ func _run() -> void:
 		{"id": "rocket_league", "name": "Rocket League", "blurb": "Car soccer", "features": ["cars", "goals"]},
 	]
 	assert(Logic.guess(sample, ["falling blocks clear lines"], [])["id"] == "tetris")
+	_check_level_builder()
 	game.stage = "select"
 	game.results.clear()
 	game.level_index = 0
@@ -44,3 +46,43 @@ func _run() -> void:
 	assert(game._total_score() > 0)
 	print("Godot gameplay tests passed")
 	quit(0)
+
+
+func _check_level_builder() -> void:
+	# Synthesize a diverse pool so LevelBuilder has room to work.
+	var games_dict := {}
+	for i in range(70):
+		var id := "fake_%02d" % i
+		games_dict[id] = {
+			"name": "Game %02d" % i,
+			"genre": "Arcade",
+			"blurb": "Pretend blurb.",
+			"features": [
+				"cluster %d" % (i / 10),
+				"style %d" % (i % 7),
+				"mechanic %d" % (i % 11),
+				"setting %d" % (i % 13),
+				"unique %d" % i,
+			],
+		}
+	var pack_a := Builder.build_pack(games_dict, "2026-10-19#0")
+	var pack_b := Builder.build_pack(games_dict, "2026-10-19#1")
+	assert(pack_a.size() == 7, "LevelBuilder must emit seven levels.")
+	assert(pack_b.size() == 7, "Refresh variant must emit seven levels.")
+	for i in range(Builder.SIZES.size()):
+		assert(pack_a[i]["games"].size() == int(Builder.SIZES[i]), "Level %d has wrong candidate count." % i)
+	var pack_a_ids := _flatten_ids(pack_a)
+	var pack_b_ids := _flatten_ids(pack_b)
+	assert(pack_a_ids != pack_b_ids, "Different refresh seeds should produce different boards.")
+	# Determinism: same seed, same result.
+	var pack_a_repeat := Builder.build_pack(games_dict, "2026-10-19#0")
+	assert(_flatten_ids(pack_a_repeat) == pack_a_ids, "LevelBuilder must be deterministic for a given seed.")
+	print("LevelBuilder tests passed")
+
+
+func _flatten_ids(pack: Array) -> Array:
+	var out: Array = []
+	for level in pack:
+		for id in level["games"]:
+			out.append(String(id))
+	return out

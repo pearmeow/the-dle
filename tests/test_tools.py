@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import jev_server
 import generate_levels
+import fetch_pool
 
 
 class FakeResponse:
@@ -104,6 +105,28 @@ class GameToolTests(unittest.TestCase):
         second = {"name": "Second", "features": ["cards", "poker", "jokers"]}
         self.assertAlmostEqual(generate_levels.jaccard(first, second), 0.2)
         self.assertTrue(generate_levels.distinguishable([first, second]))
+
+    def test_fetch_pool_output_has_stable_shape(self):
+        pool = [
+            {
+                "id": f"rawg_{i}",
+                "name": f"Game {i}",
+                "genre": "Arcade",
+                "blurb": "Gameplay tags: alpha, beta.",
+                "features": [f"cluster {i // 10}", f"mechanic {i % 11}", "shared tag"],
+                "rawg_url": f"https://rawg.io/games/{i}",
+            }
+            for i in range(60)
+        ]
+        with patch.object(fetch_pool.generate_levels, "fetch_games", return_value=pool):
+            built = fetch_pool.build_pool("fake-key", pages=1)
+        self.assertEqual([g["id"] for g in built], sorted(g["id"] for g in pool))
+        payload = fetch_pool.to_output("2026-10-19", built)
+        self.assertEqual(payload["generated_for"], "2026-10-19")
+        self.assertEqual(payload["source"], "RAWG")
+        self.assertEqual(payload["pool_size"], len(pool))
+        self.assertEqual(set(payload["games"]), {g["id"] for g in pool})
+        self.assertNotIn("id", next(iter(payload["games"].values())))
 
     def test_generated_board_gets_more_similar(self):
         pool = [
