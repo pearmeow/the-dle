@@ -7379,5 +7379,259 @@
       ],
       "rawg_url": "https://rawg.io/games/battlefield-1"
     }
-  }
+  },
+  "variants": [
+    [
+      {
+        "theme": "Opening act",
+        "note": "These games have little in common.",
+        "games": [
+          "rawg_11435",
+          "rawg_750",
+          "rawg_23322"
+        ]
+      },
+      {
+        "theme": "Spot the mechanic",
+        "note": "Find a mechanic that sets your pick apart.",
+        "games": [
+          "rawg_58812",
+          "rawg_21265",
+          "rawg_16944",
+          "rawg_250"
+        ]
+      },
+      {
+        "theme": "Shared territory",
+        "note": "Use one memorable feature.",
+        "games": [
+          "rawg_1030",
+          "rawg_58550",
+          "rawg_7381",
+          "rawg_28201",
+          "rawg_15858"
+        ]
+      },
+      {
+        "theme": "Closer calls",
+        "note": "Setting and play style both help.",
+        "games": [
+          "rawg_4013",
+          "rawg_17037",
+          "rawg_295021",
+          "rawg_10754",
+          "rawg_22781",
+          "rawg_11973"
+        ]
+      },
+      {
+        "theme": "Fine details",
+        "note": "Pick a detail the others do not share.",
+        "games": [
+          "rawg_480",
+          "rawg_22121",
+          "rawg_3932",
+          "rawg_802",
+          "rawg_3498",
+          "rawg_290856",
+          "rawg_25"
+        ]
+      },
+      {
+        "theme": "Near neighbors",
+        "note": "Similar tags make every word count.",
+        "games": [
+          "rawg_4179",
+          "rawg_28492",
+          "rawg_4544",
+          "rawg_397477",
+          "rawg_2623",
+          "rawg_50778",
+          "rawg_906"
+        ]
+      },
+      {
+        "theme": "The final read",
+        "note": "Eight close options. Be exact.",
+        "games": [
+          "rawg_29177",
+          "rawg_13910",
+          "rawg_5286",
+          "rawg_28",
+          "rawg_3687",
+          "rawg_3015",
+          "rawg_3696",
+          "rawg_12536"
+        ]
+      }
+    ],
+    [
+      {
+        "theme": "Opening act",
+        "note": "These games have little in common.",
+        "games": [
+          "rawg_3636",
+          "rawg_13633",
+          "rawg_3387"
+        ]
+      },
+      {
+        "theme": "Spot the mechanic",
+        "note": "Find a mechanic that sets your pick apart.",
+        "games": [
+          "rawg_22781",
+          "rawg_11312",
+          "rawg_13247",
+          "rawg_28121"
+        ]
+      },
+      {
+        "theme": "Shared territory",
+        "note": "Use one memorable feature.",
+        "games": [
+          "rawg_29177",
+          "rawg_274480",
+          "rawg_10061",
+          "rawg_3474",
+          "rawg_18272"
+        ]
+      },
+      {
+        "theme": "Closer calls",
+        "note": "Setting and play style both help.",
+        "games": [
+          "rawg_4101",
+          "rawg_18240",
+          "rawg_16209",
+          "rawg_3766",
+          "rawg_4252",
+          "rawg_2235"
+        ]
+      },
+      {
+        "theme": "Fine details",
+        "note": "Pick a detail the others do not share.",
+        "games": [
+          "rawg_17857",
+          "rawg_624",
+          "rawg_1169",
+          "rawg_18336",
+          "rawg_3931",
+          "rawg_17572",
+          "rawg_290856"
+        ]
+      },
+      {
+        "theme": "Near neighbors",
+        "note": "Similar tags make every word count.",
+        "games": [
+          "rawg_654",
+          "rawg_46956",
+          "rawg_9475",
+          "rawg_13627",
+          "rawg_3790",
+          "rawg_3876",
+          "rawg_11974"
+        ]
+      },
+      {
+        "theme": "The final read",
+        "note": "Eight close options. Be exact.",
+        "games": [
+          "rawg_2100",
+          "rawg_1682",
+          "rawg_15002",
+          "rawg_5193",
+          "rawg_18080",
+          "rawg_13668",
+          "rawg_3254",
+          "rawg_4527"
+        ]
+      }
+    ],
+    [
+      {
+        "theme": "Opening act",
+        "note": "These games have little in common.",
+        "games": [
+          "rawg_3368",
+          "rawg_274480",
+          "rawg_5564"
+        ]
+      },
+      {
+        "theme": "Spot the mechanic",
+        "note": "Find a mechanic that sets your pick apart.",
+        "games": [
+          "rawg_14317",
+          "rawg_8488",
+          "rawg_12756",
+          "rawg_274755"
+        ]
+      },
+      {
+        "theme": "Shared territory",
+        "note": "Use one memorable feature.",
+        "games": [
+          "rawg_10989",
+          "rawg_23027",
+          "rawg_16209",
+          "rawg_430",
+          "rawg_46889"
+        ]
+      },
+      {
+        "theme": "Closer calls",
+        "note": "Setting and play style both help.",
+        "games": [
+          "rawg_42215",
+          "rawg_9966",
+          "rawg_6617",
+          "rawg_58175",
+          "rawg_15002",
+          "rawg_13305"
+        ]
+      },
+      {
+        "theme": "Fine details",
+        "note": "Pick a detail the others do not share.",
+        "games": [
+          "rawg_17822",
+          "rawg_3350",
+          "rawg_1450",
+          "rawg_5565",
+          "rawg_19299",
+          "rawg_19365",
+          "rawg_16359"
+        ]
+      },
+      {
+        "theme": "Near neighbors",
+        "note": "Similar tags make every word count.",
+        "games": [
+          "rawg_47137",
+          "rawg_4200",
+          "rawg_13247",
+          "rawg_20406",
+          "rawg_42895",
+          "rawg_3603",
+          "rawg_12024"
+        ]
+      },
+      {
+        "theme": "The final read",
+        "note": "Eight close options. Be exact.",
+        "games": [
+          "rawg_2235",
+          "rawg_4570",
+          "rawg_829",
+          "rawg_108",
+          "rawg_16113",
+          "rawg_9475",
+          "rawg_3766",
+          "rawg_9671"
+        ]
+      }
+    ]
+  ]
 }
