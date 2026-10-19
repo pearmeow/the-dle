@@ -626,7 +626,8 @@ func _build_sidebar(parent: BoxContainer) -> void:
 
 
 func _build_main(parent: BoxContainer) -> void:
-	var box := _vbox(parent, 12)
+	var box := _vbox(parent, 14)
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	if compact_layout:
@@ -642,14 +643,10 @@ func _build_main(parent: BoxContainer) -> void:
 
 
 func _build_select(box: BoxContainer) -> void:
-	box.add_child(_label("Pick your secret.", 34 if tiny_layout else 48, TEXT, true))
-	box.add_child(_paragraph("%s games. One hidden answer. Make Jev guess yours." % _current_ids().size(), 17, MUTED))
+	box.add_child(_label("Pick your secret.", 30 if tiny_layout else 40, TEXT, true))
+	box.add_child(_paragraph("Choose one of %d games. Jev sees the list, but your choice stays secret." % _current_ids().size(), 16, MUTED))
 	_build_cards(box, true)
-	var note := _panel(box, PANEL, BORDER, 4, 18)
-	var note_box := _vbox(note, 8)
-	note_box.add_child(_label("What would give it away?", 23, TEXT, true))
-	note_box.add_child(_paragraph("Choose a card above, then describe a distinctive feature.", 15, MUTED))
-	note_box.add_child(_paragraph("Keep the title secret. You have %d guesses and %d words per clue." % [ATTEMPT_LIMITS[level_index], WORD_LIMITS[level_index]], 13, MUTED))
+	box.add_child(_paragraph("Next: describe your game without using its title. %d guesses · %d words per clue." % [ATTEMPT_LIMITS[level_index], WORD_LIMITS[level_index]], 16, MUTED))
 	if _can_refresh():
 		var refresh := _button("Reshuffle board · %d left" % (MAX_REFRESHES - refresh_count), false)
 		refresh.pressed.connect(_refresh_board)
@@ -703,8 +700,7 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size.y = 330 if selectable else 240
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size.y = 410 if selectable else 310
 	box.add_child(scroll)
 	var row := _hbox(scroll, 12)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -721,24 +717,24 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 		if selected:
 			card.add_theme_stylebox_override("panel", _style(PANEL, CORAL, 5, 3, 7))
 		var content := _vbox(card, 6)
-		var artwork := _card_art(game, width - 14, 180 if selectable else 110)
+		var artwork := _card_art(game, width - 14, 200 if selectable else 100)
 		artwork.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		content.add_child(artwork)
-		var title := _paragraph(String(game["name"]), 15, TEXT)
+		var title := _paragraph(String(game["name"]), 18, TEXT)
 		title.add_theme_font_override("font", heading_font)
 		title.custom_minimum_size.x = width - 14
 		title.max_lines_visible = 2
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		content.add_child(title)
-		var caption := _paragraph(_card_caption(game), 12, MUTED)
+		var caption := _paragraph(_card_caption(game), 16, MUTED)
 		caption.max_lines_visible = 3 if selectable else 2
 		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		content.add_child(caption)
 		if selected:
 			content.add_child(_label("YOUR SECRET", 11, CORAL, true))
 		if selectable:
-			var choose := _button("%02d   Choose this game" % [i + 1], false)
-			choose.add_theme_font_size_override("font_size", 12)
+			var choose := _button("%02d   Choose →" % [i + 1], false)
+			choose.add_theme_font_size_override("font_size", 16)
 			choose.pressed.connect(_choose_target.bind(String(game["id"])))
 			content.add_child(choose)
 			card.gui_input.connect(func(event: InputEvent) -> void:
@@ -754,12 +750,12 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 
 
 func _build_hint(box: BoxContainer) -> void:
-	box.add_child(_label("What would give it away?", 29 if tiny_layout else 40, TEXT, true))
+	box.add_child(_label("Write your clue.", 29 if tiny_layout else 36, TEXT, true))
 	box.add_child(_paragraph("Your secret is %s. Help Jev find it." % _game_name(target_id), 16, MUTED))
 	_build_cards(box, false)
 	var composer := _panel(box, PANEL, BORDER, 5, 18)
 	var compose := _vbox(composer, 9)
-	compose.add_child(_label("Jev is following your clues…" if stage == "thinking" else "A little detail. A big revelation.", 23, TEXT, true))
+	compose.add_child(_label("Jev is following your clues…" if stage == "thinking" else "Clue %d · What makes it distinctive?" % (hints.size() + 1), 19, TEXT, true))
 	if stage != "thinking":
 		hint_edit = LineEdit.new()
 		hint_edit.placeholder_text = "Describe a distinctive feature…"
@@ -850,6 +846,7 @@ func _build_jev(parent: BoxContainer) -> void:
 	var box := _vbox(parent, 10)
 	box.custom_minimum_size.x = 235 if not compact_layout else 0
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	var bubble := _panel(box, PANEL, BORDER, 22, 17)
 	var speech := "A secret?\nI'm listening."
 	if stage == "thinking":
@@ -870,13 +867,12 @@ func _build_jev(parent: BoxContainer) -> void:
 	portrait.texture = jev_art
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.custom_minimum_size.y = 220 if compact_layout else 290
-	portrait.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	portrait.custom_minimum_size.y = 180 if compact_layout else 250
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(portrait)
-	box.add_child(_label("Jev · your guessing detective", 13, TEXT, true))
+	box.add_child(_label("Jev · your guessing detective", 16, TEXT, true))
 	var mode := "Offline clue matcher" if jev_url.is_empty() else ("Offline fallback" if remote_failed else "AI guessing partner")
-	box.add_child(_label(mode, 11, MUTED))
+	box.add_child(_label(mode, 14, MUTED))
 	if not guesses.is_empty():
 		var scroll := ScrollContainer.new()
 		scroll.custom_minimum_size.y = 160
@@ -891,7 +887,7 @@ func _build_jev(parent: BoxContainer) -> void:
 			if level_index <= 2:
 				log.add_child(_paragraph(String(guess.get("reason", "")), 12, MUTED))
 	else:
-		box.add_child(_paragraph("I see the games and your clues. Your choice stays with you.", 13, MUTED))
+		box.add_child(_paragraph("Pick a game. I’ll follow your clues.", 16, MUTED))
 
 
 func _add_step(parent: BoxContainer, number: String, heading: String, detail: String) -> void:
