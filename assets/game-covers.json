@@ -1,0 +1,338 @@
+{
+  "stardew": {
+    "name": "Stardew Valley",
+    "path": "res://assets/game-covers/stardew.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/413150/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/413150/"
+  },
+  "portal_2": {
+    "name": "Portal 2",
+    "path": "res://assets/game-covers/portal_2.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/620/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/620/"
+  },
+  "civ_6": {
+    "name": "Sid Meier's Civilization VI",
+    "path": "res://assets/game-covers/civ_6.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/289070/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/289070/"
+  },
+  "overcooked_2": {
+    "name": "Overcooked! 2",
+    "path": "res://assets/game-covers/overcooked_2.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/728880/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/728880/"
+  },
+  "hollow_knight": {
+    "name": "Hollow Knight",
+    "path": "res://assets/game-covers/hollow_knight.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/367520/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/367520/"
+  },
+  "hades": {
+    "name": "Hades",
+    "path": "res://assets/game-covers/hades.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1145360/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1145360/"
+  },
+  "slay_spire": {
+    "name": "Slay the Spire",
+    "path": "res://assets/game-covers/slay_spire.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/646570/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/646570/"
+  },
+  "dead_cells": {
+    "name": "Dead Cells",
+    "path": "res://assets/game-covers/dead_cells.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/588650/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/588650/"
+  },
+  "vampire_survivors": {
+    "name": "Vampire Survivors",
+    "path": "res://assets/game-covers/vampire_survivors.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1794680/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1794680/"
+  },
+  "balatro": {
+    "name": "Balatro",
+    "path": "res://assets/game-covers/balatro.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2379780/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/2379780/"
+  },
+  "celeste": {
+    "name": "Celeste",
+    "path": "res://assets/game-covers/celeste.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/504230/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/504230/"
+  },
+  "super_meat_boy": {
+    "name": "Super Meat Boy",
+    "path": "res://assets/game-covers/super_meat_boy.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/40800/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/40800/"
+  },
+  "ori_blind": {
+    "name": "Ori and the Blind Forest",
+    "path": "res://assets/game-covers/ori_blind.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/261570/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/261570/"
+  },
+  "rayman_legends": {
+    "name": "Rayman Legends",
+    "path": "res://assets/game-covers/rayman_legends.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/242550/header.jpg",
+    "store_url": "https://store.steampowered.com/app/242550/"
+  },
+  "terraria": {
+    "name": "Terraria",
+    "path": "res://assets/game-covers/terraria.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/105600/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/105600/"
+  },
+  "valheim": {
+    "name": "Valheim",
+    "path": "res://assets/game-covers/valheim.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/892970/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/892970/"
+  },
+  "subnautica": {
+    "name": "Subnautica",
+    "path": "res://assets/game-covers/subnautica.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/264710/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/264710/"
+  },
+  "dont_starve": {
+    "name": "Don't Starve",
+    "path": "res://assets/game-covers/dont_starve.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/219740/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/219740/"
+  },
+  "raft": {
+    "name": "Raft",
+    "path": "res://assets/game-covers/raft.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/648800/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/648800/"
+  },
+  "the_forest": {
+    "name": "The Forest",
+    "path": "res://assets/game-covers/the_forest.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/242760/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/242760/"
+  },
+  "dark_souls_3": {
+    "name": "Dark Souls III",
+    "path": "res://assets/game-covers/dark_souls_3.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/374320/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/374320/"
+  },
+  "elden_ring": {
+    "name": "Elden Ring",
+    "path": "res://assets/game-covers/elden_ring.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1245620/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1245620/"
+  },
+  "lies_of_p": {
+    "name": "Lies of P",
+    "path": "res://assets/game-covers/lies_of_p.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1627720/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1627720/"
+  },
+  "salt_sanctuary": {
+    "name": "Salt and Sanctuary",
+    "path": "res://assets/game-covers/salt_sanctuary.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/283640/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/283640/"
+  },
+  "coral_island": {
+    "name": "Coral Island",
+    "path": "res://assets/game-covers/coral_island.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1158160/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1158160/"
+  },
+  "sun_haven": {
+    "name": "Sun Haven",
+    "path": "res://assets/game-covers/sun_haven.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1432860/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1432860/"
+  },
+  "fields_mistria": {
+    "name": "Fields of Mistria",
+    "path": "res://assets/game-covers/fields_mistria.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2142790/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/2142790/"
+  },
+  "sandrock": {
+    "name": "My Time at Sandrock",
+    "path": "res://assets/game-covers/sandrock.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1084600/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1084600/"
+  },
+  "story_seasons": {
+    "name": "Story of Seasons: Friends of Mineral Town",
+    "path": "res://assets/game-covers/story_seasons.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/978780/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/978780/"
+  },
+  "rune_factory_5": {
+    "name": "Rune Factory 5",
+    "path": "res://assets/game-covers/rune_factory_5.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1702330/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1702330/"
+  },
+  "sims_4": {
+    "name": "The Sims 4",
+    "path": "res://assets/game-covers/sims_4.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1222670/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1222670/"
+  },
+  "xcom_2": {
+    "name": "XCOM 2",
+    "path": "res://assets/game-covers/xcom_2.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/268500/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/268500/"
+  },
+  "short_hike": {
+    "name": "A Short Hike",
+    "path": "res://assets/game-covers/short_hike.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1055540/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1055540/"
+  },
+  "obra_dinn": {
+    "name": "Return of the Obra Dinn",
+    "path": "res://assets/game-covers/obra_dinn.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/653530/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/653530/"
+  },
+  "outer_wilds": {
+    "name": "Outer Wilds",
+    "path": "res://assets/game-covers/outer_wilds.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/753640/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/753640/"
+  },
+  "her_story": {
+    "name": "Her Story",
+    "path": "res://assets/game-covers/her_story.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/368370/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/368370/"
+  },
+  "golden_idol": {
+    "name": "The Case of the Golden Idol",
+    "path": "res://assets/game-covers/golden_idol.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1677770/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1677770/"
+  },
+  "the_witness": {
+    "name": "The Witness",
+    "path": "res://assets/game-covers/the_witness.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/210970/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/210970/"
+  },
+  "unpacking": {
+    "name": "Unpacking",
+    "path": "res://assets/game-covers/unpacking.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1135690/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1135690/"
+  },
+  "cozy_grove": {
+    "name": "Cozy Grove",
+    "path": "res://assets/game-covers/cozy_grove.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1458100/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1458100/"
+  },
+  "little_kitty": {
+    "name": "Little Kitty, Big City",
+    "path": "res://assets/game-covers/little_kitty.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1177980/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1177980/"
+  },
+  "keep_talking": {
+    "name": "Keep Talking and Nobody Explodes",
+    "path": "res://assets/game-covers/keep_talking.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/341800/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/341800/"
+  },
+  "moving_out_2": {
+    "name": "Moving Out 2",
+    "path": "res://assets/game-covers/moving_out_2.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1641700/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1641700/"
+  },
+  "chicken_horse": {
+    "name": "Ultimate Chicken Horse",
+    "path": "res://assets/game-covers/chicken_horse.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/386940/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/386940/"
+  },
+  "jackbox_10": {
+    "name": "The Jackbox Party Pack 10",
+    "path": "res://assets/game-covers/jackbox_10.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2216830/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/2216830/"
+  },
+  "monster_train": {
+    "name": "Monster Train",
+    "path": "res://assets/game-covers/monster_train.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1102190/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1102190/"
+  },
+  "inscryption": {
+    "name": "Inscryption",
+    "path": "res://assets/game-covers/inscryption.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1092790/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1092790/"
+  },
+  "wildfrost": {
+    "name": "Wildfrost",
+    "path": "res://assets/game-covers/wildfrost.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1811990/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1811990/"
+  },
+  "griftlands": {
+    "name": "Griftlands",
+    "path": "res://assets/game-covers/griftlands.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/601840/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/601840/"
+  },
+  "across_obelisk": {
+    "name": "Across the Obelisk",
+    "path": "res://assets/game-covers/across_obelisk.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1385380/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1385380/"
+  },
+  "ori_wisps": {
+    "name": "Ori and the Will of the Wisps",
+    "path": "res://assets/game-covers/ori_wisps.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1057090/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1057090/"
+  },
+  "blasphemous": {
+    "name": "Blasphemous",
+    "path": "res://assets/game-covers/blasphemous.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/774361/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/774361/"
+  },
+  "ender_lilies": {
+    "name": "Ender Lilies: Quietus of the Knights",
+    "path": "res://assets/game-covers/ender_lilies.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1369630/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/1369630/"
+  },
+  "axiom_verge": {
+    "name": "Axiom Verge",
+    "path": "res://assets/game-covers/axiom_verge.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/332200/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/332200/"
+  },
+  "guacamelee_2": {
+    "name": "Guacamelee! 2",
+    "path": "res://assets/game-covers/guacamelee_2.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/534550/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/534550/"
+  },
+  "animal_well": {
+    "name": "Animal Well",
+    "path": "res://assets/game-covers/animal_well.jpg",
+    "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/813230/library_600x900.jpg",
+    "store_url": "https://store.steampowered.com/app/813230/"
+  }
+}

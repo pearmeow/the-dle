@@ -24,6 +24,7 @@ const WORD_LIMITS := [18, 16, 14, 12, 11, 9, 8]
 const ATTEMPT_LIMITS := [5, 5, 4, 4, 4, 3, 3]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
+var cover_catalog: Dictionary = {}
 var playtest_mode := false
 var catalog: Dictionary = {}
 var levels: Array = []
@@ -61,6 +62,9 @@ var hint_edit: LineEdit
 
 
 func _ready() -> void:
+	var cover_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/game-covers.json"))
+	if cover_data is Dictionary:
+		cover_catalog = cover_data
 	playtest_mode = OS.get_cmdline_user_args().has("--playtest")
 	if playtest_mode:
 		get_window().title = "Guess What I Mean! · Playtest"
@@ -651,22 +655,35 @@ func _build_select(box: BoxContainer) -> void:
 		refresh.pressed.connect(_refresh_board)
 		box.add_child(refresh)
 
-func _cover_index(game: Dictionary) -> int:
-	var words := (String(game.get("name", "")) + " " + String(game.get("genre", ""))).to_lower()
-	for feature in game.get("features", []):
-		if not "steam" in String(feature).to_lower():
-			words += " " + String(feature).to_lower()
-	if "horror" in words or "evil" in words or "dark souls" in words:
-		return 0
-	if "war" in words or "racing" in words or "shooter" in words or "fps" in words:
-		return 1
-	if "space" in words or "alien" in words or "outer" in words or "sci-fi" in words:
-		return 3
-	if "puzzle" in words or "deckbuilding" in words or "tetris" in words:
-		return 5
-	if "rpg" in words or "fantasy" in words or "knight" in words:
-		return 2
-	return 4
+func _card_art(game: Dictionary, width: float, height: float) -> Control:
+	var name := String(game.get("name", "Game"))
+	for entry in cover_catalog.values():
+		if String(entry.get("name", "")).to_lower() == name.to_lower():
+			var image := TextureRect.new()
+			image.texture = load(String(entry["path"]))
+			image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			image.custom_minimum_size = Vector2(width, height)
+			image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			return image
+	# Unknown titles get a clearly typographic game file, never unrelated cover art.
+	var colors := [Color("#355653"), Color("#633e36"), Color("#504864"), Color("#515b34"), Color("#334f67")]
+	var ink: Color = colors[posmod(name.hash(), colors.size())]
+	var poster := _panel(null, ink, ink, 2, 14)
+	poster.custom_minimum_size = Vector2(width, height)
+	poster.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var content := _vbox(poster, 12)
+	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content.add_child(_label("GAME FILE", 12, PANEL))
+	_spacer(content, false)
+	var title := _paragraph(name, 23, PANEL)
+	title.add_theme_font_override("font", heading_font)
+	content.add_child(title)
+	_spacer(content, false)
+	content.add_child(_paragraph(String(game.get("genre", "Video game")), 14, PANEL))
+	for child in content.get_children():
+		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return poster
 
 func _card_caption(game: Dictionary) -> String:
 	var blurb := String(game.get("blurb", ""))
@@ -704,19 +721,8 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 		if selected:
 			card.add_theme_stylebox_override("panel", _style(PANEL, CORAL, 5, 3, 7))
 		var content := _vbox(card, 6)
-		var artwork := TextureRect.new()
-		var atlas := AtlasTexture.new()
-		var sheet: Texture2D = preload("res://assets/covers.png")
-		atlas.atlas = sheet
-		var tile := sheet.get_size() / Vector2(3, 2)
-		var index := _cover_index(game)
-		atlas.region = Rect2(Vector2(index % 3, floori(index / 3.0)) * tile, tile)
-		artwork.texture = atlas
-		artwork.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		artwork.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		artwork.custom_minimum_size = Vector2(width - 14, 180 if selectable else 110)
+		var artwork := _card_art(game, width - 14, 180 if selectable else 110)
 		artwork.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		artwork.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		content.add_child(artwork)
 		var title := _paragraph(String(game["name"]), 15, TEXT)
 		title.add_theme_font_override("font", heading_font)
