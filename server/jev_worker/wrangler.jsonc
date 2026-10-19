@@ -1,0 +1,26 @@
+{
+  // Cloudflare Workers config for the TypeSafe Jev proxy.
+  //
+  //   wrangler login
+  //   wrangler secret put JEV_API_KEY       # paste the TypeSafe key when prompted
+  //   wrangler deploy                       # publishes to <name>.<account>.workers.dev
+  //
+  // The TypeSafe key stays in the Worker secret store and is never
+  // readable by the Godot client. The client only talks to this Worker.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "jev-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-19",
+  "vars": {
+    // Non-sensitive defaults. Override per environment via `wrangler secret put`
+    // for sensitive values, or edit here for non-sensitive ones.
+    "JEV_MODEL": "jev-latest",
+    // Comma-separated list of allowed Origins for CORS. Use "*" to
+    // accept any origin (simplest, abuse-tolerant). Common itch.io
+    // iframe origin: https://html-classic.itch.zone
+    "JEV_ALLOWED_ORIGIN": "*"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

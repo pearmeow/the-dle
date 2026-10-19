@@ -19,6 +19,13 @@ const GENERATED_PATH := "res://data/generated_levels.json"
 const BUNDLED_POOL := "res://data/daily_pool.json"
 const POOL_CACHE := "user://daily_pool.json"
 const POOL_URL := "https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json"
+# Public URL of the Cloudflare Worker that proxies the TypeSafe Jev
+# API. The TypeSafe key never ships with the game; the Worker holds
+# it as a Cloudflare secret. Set JEV_API_URL in the process env (for
+# native builds) to override this at runtime; HTML5 builds always use
+# the constant because browsers have no process env. Leave empty to
+# force offline Jev.
+const DEFAULT_JEV_URL := "https://jev-proxy.pearmeow.workers.dev/guess"
 const MAX_REFRESHES := 2
 # Set to true to resume mid-run progress, streaks, and remaining
 # reshuffles across launches. Keep false for a "fresh every launch"
@@ -65,6 +72,8 @@ var hint_edit: LineEdit
 
 func _ready() -> void:
 	jev_url = OS.get_environment("JEV_API_URL").strip_edges()
+	if jev_url.is_empty():
+		jev_url = DEFAULT_JEV_URL
 	http = HTTPRequest.new()
 	http.timeout = 9.0
 	http.request_completed.connect(_on_http_completed)
