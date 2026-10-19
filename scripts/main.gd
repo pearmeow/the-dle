@@ -20,6 +20,11 @@ const BUNDLED_POOL := "res://data/daily_pool.json"
 const POOL_CACHE := "user://daily_pool.json"
 const POOL_URL := "https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json"
 const MAX_REFRESHES := 2
+# Set to true to resume mid-run progress, streaks, and remaining
+# reshuffles across launches. Keep false for a "fresh every launch"
+# experience (useful while playtesting, and matches the current
+# design: closing the window discards the current run).
+const PERSIST_PROGRESS := false
 const WORD_LIMITS := [18, 16, 14, 12, 11, 9, 8]
 const ATTEMPT_LIMITS := [5, 5, 4, 4, 4, 3, 3]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
@@ -280,6 +285,15 @@ func _refresh_board() -> void:
 
 
 func _load_daily_progress() -> void:
+	if not PERSIST_PROGRESS:
+		# Fresh start every launch: wipe any stale save left behind
+		# by a previous build so refresh_count, hints, guesses, and
+		# streak all reset. Progress is not tracked across sessions.
+		if FileAccess.file_exists(SAVE_PATH):
+			var user_dir := DirAccess.open("user://")
+			if user_dir != null:
+				user_dir.remove(SAVE_PATH.get_file())
+		return
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
@@ -319,6 +333,8 @@ func _load_daily_progress() -> void:
 
 
 func _save_progress() -> void:
+	if not PERSIST_PROGRESS:
+		return
 	var record := {
 		"day": day_key,
 		"board_id": board_id,
