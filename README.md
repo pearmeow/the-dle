@@ -4,6 +4,8 @@ A daily Godot game about describing video games to a guessing partner named Jev.
 
 ## Play
 
+The illustrated title screen offers **Start today’s game**, **How to play**, and **Settings** (fullscreen). Returning players can continue their saved run. The timer remains stopped on the title screen and starts after pressing Start or Continue.
+
 Open `project.godot` in Godot 4.7 or run:
 
 ```sh
@@ -16,7 +18,7 @@ The game works immediately in **offline mode**. It has two curated daily boards,
 2. Write a hint without using words from its title.
 3. Read Jev's guess. If it misses, use another clue.
 
-Later levels have more similar candidates, shorter per-hint word limits, fewer guesses, and less explanation from Jev. A correct answer scores `max(100, 1000 − 220 × extra hints − 2 × total words − active seconds)`, with the time penalty capped at 150. A missed level scores zero. The game pauses its active timer while Jev is thinking or the window is unfocused.
+Later levels have more similar candidates, shorter per-hint word limits, fewer guesses, and less explanation from Jev. A correct answer scores `max(100, 1000 − 220 × extra hints − 2 × total words − active seconds)`, with the time penalty capped at 150. A missed level scores zero. The per-level timer starts when the candidate cards appear and includes Quick intro reading and clue-writing time. It pauses while Jev is thinking or the window is unfocused.
 
 Offline Jev is a deterministic clue matcher. It scores words and phrases against candidate features, favors details that are rare among the current options, and avoids prior guesses. It never receives the selected target. For real model guesses, use the optional server below.
 
@@ -25,6 +27,14 @@ Offline Jev is a deterministic clue matcher. It scores words and phrases against
 Run `godot --path . -- --playtest` for a fresh run without reading or writing daily progress. The window is labeled **Playtest**. Close it when finished. Normal launches continue using the daily save.
 
 The tabletop interface uses matching game covers where available and typographic game-file cards for other titles. Cover sources are recorded in `assets/game-covers.json`; original mascot prompts and font license information are in `assets/ARTWORK.md`.
+
+## Music
+
+“Thinking Music” by Kevin MacLeod plays quietly across the title screen and gameplay, with a fade-in and looping playback. Use **Music on/off** during a run or **Settings** for volume and mute. Audio preferences are saved separately from daily progress. Full source and CC BY 4.0 attribution are in `assets/audio/CREDITS.md` and the in-game Settings panel.
+
+## Interaction feedback
+
+Buttons use a soft tap; correct guesses, missed guesses, level advancement, and daily completion each have their own quiet sound. Sound effects have independent volume and mute controls in Settings. The shared `_button` helper adds click feedback automatically to new buttons. Original effects are reproducible with `tools/generate_sfx.py`.
 
 ## Use a model for Jev
 

@@ -19,6 +19,7 @@ func _run() -> void:
 	for dimensions in [Vector2(1440, 900), Vector2(1024, 768), Vector2(800, 600), Vector2(480, 800), Vector2(360, 720)]:
 		var game = PreviewGame.new()
 		root.add_child(game)
+		game._start_game()
 		game.set_anchors_preset(Control.PRESET_TOP_LEFT)
 		game.size = dimensions
 		game.stage = "select"
@@ -57,8 +58,10 @@ func _run() -> void:
 		await process_frame
 		await process_frame
 		await _assert_hint_controls(game, dimensions)
+		await create_timer(0.7).timeout
 		game.queue_free()
 		await process_frame
+	await create_timer(0.2).timeout
 	print("Godot layout tests passed")
 	quit(0)
 

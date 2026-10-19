@@ -334,5 +334,23 @@
     "path": "res://assets/game-covers/animal_well.jpg",
     "source": "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/813230/library_600x900.jpg",
     "store_url": "https://store.steampowered.com/app/813230/"
+  },
+  "minecraft": {
+    "name": "Minecraft",
+    "path": "res://assets/game-covers/minecraft.jpg",
+    "source": "https://www.minecraft.net/content/dam/minecraftnet/games/minecraft/key-art/About-Minecraft_Featured-Image-0_570x321.jpg",
+    "store_url": "https://www.minecraft.net/en-us/about-minecraft"
+  },
+  "mario_kart": {
+    "name": "Mario Kart 8 Deluxe",
+    "path": "res://assets/game-covers/mario_kart.jpg",
+    "source": "https://assets.nintendo.com/image/upload/c_fill,w_1200/q_auto:best/f_jpg/dpr_2.0/store/software/switch/70010000000153/de697f487a36d802dd9a5ff0341f717c8486221f2f1219b675af37aca63bc453",
+    "store_url": "https://www.nintendo.com/us/store/products/mario-kart-8-deluxe-switch/"
+  },
+  "tetris": {
+    "name": "Tetris",
+    "path": "res://assets/game-covers/tetris.png",
+    "source": "https://www.datocms-assets.com/145957/1744284280-tetris-mobile.png?fit=max&w=1200",
+    "store_url": "https://play.tetris.com/"
   }
 }

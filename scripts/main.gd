@@ -24,6 +24,9 @@ const WORD_LIMITS := [18, 16, 14, 12, 11, 9, 8]
 const ATTEMPT_LIMITS := [5, 5, 4, 4, 4, 3, 3]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
+var run_generation := 0
+var showing_title := true
+var intro_open := false
 var cover_catalog: Dictionary = {}
 var playtest_mode := false
 var catalog: Dictionary = {}
@@ -54,6 +57,14 @@ var refresh_count := 0
 
 var heading_font: Font = preload("res://assets/Bitter-Bold.ttf")
 var body_font: Font = preload("res://assets/Lato-Regular.ttf")
+var sfx_root: Node
+var sfx_players: Dictionary = {}
+var sfx_volume := 0.5
+var sfx_muted := false
+var music_player: AudioStreamPlayer
+var music_volume := 0.18
+var music_muted := false
+var music_fade: Tween
 var http: HTTPRequest
 var pool_http: HTTPRequest
 var timer_label: Label
@@ -73,6 +84,8 @@ func _ready() -> void:
 	http.timeout = 9.0
 	http.request_completed.connect(_on_http_completed)
 	add_child(http)
+	_setup_music()
+	_setup_sound_effects()
 	_load_game_data()
 	if not playtest_mode:
 		_load_daily_progress()
@@ -83,15 +96,178 @@ func _ready() -> void:
 	_fetch_latest_pool()
 
 
+func _exit_tree() -> void:
+	for player in sfx_players.values():
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+	sfx_players.clear()
+	if is_instance_valid(music_player):
+		music_player.stop()
+		music_player.stream = null
+
+
+func _setup_sound_effects() -> void:
+	var settings := ConfigFile.new()
+	if settings.load("user://audio_settings.cfg") == OK:
+		sfx_volume = clampf(float(settings.get_value("effects", "volume", 0.5)), 0.0, 1.0)
+		sfx_muted = bool(settings.get_value("effects", "muted", false))
+	sfx_root = Node.new()
+	sfx_root.name = "SoundEffects"
+	add_child(sfx_root)
+	var sounds := {
+		"button": preload("res://assets/audio/sfx/button.wav"),
+		"correct": preload("res://assets/audio/sfx/correct.wav"),
+		"miss": preload("res://assets/audio/sfx/miss.wav"),
+		"progress": preload("res://assets/audio/sfx/progress.wav"),
+		"complete": preload("res://assets/audio/sfx/complete.wav")
+	}
+	for key in sounds:
+		var player := AudioStreamPlayer.new()
+		player.name = String(key).capitalize()
+		player.stream = sounds[key]
+		player.max_polyphony = 3
+		player.volume_db = linear_to_db(maxf(sfx_volume, 0.0001))
+		sfx_root.add_child(player)
+		sfx_players[key] = player
+
+func _play_sfx(kind: String) -> void:
+	if sfx_muted or sfx_volume <= 0.0 or not sfx_players.has(kind):
+		return
+	var player: AudioStreamPlayer = sfx_players[kind]
+	player.volume_db = linear_to_db(maxf(sfx_volume, 0.0001))
+	player.play()
+
+func _set_sfx_muted(value: bool) -> void:
+	sfx_muted = value
+	if value:
+		for player in sfx_players.values():
+			player.stop()
+	_save_audio_settings()
+
+func _set_sfx_volume(value: float) -> void:
+	sfx_volume = clampf(value, 0.0, 1.0)
+	for player in sfx_players.values():
+		player.volume_db = linear_to_db(maxf(sfx_volume, 0.0001))
+		if sfx_volume <= 0.0:
+			player.stop()
+	_save_audio_settings()
+
+func _build_effects_settings(parent: BoxContainer) -> void:
+	parent.add_child(_label("Sound effects", 19, TEXT, true))
+	var mute := CheckButton.new()
+	mute.text = "Mute sound effects"
+	mute.button_pressed = sfx_muted
+	mute.add_theme_font_override("font", body_font)
+	mute.add_theme_font_size_override("font_size", 17)
+	mute.add_theme_color_override("font_color", TEXT)
+	mute.toggled.connect(_set_sfx_muted)
+	parent.add_child(mute)
+	var caption := _label("Effects volume · %d%%" % roundi(sfx_volume * 100), 17, TEXT)
+	parent.add_child(caption)
+	var slider := HSlider.new()
+	slider.min_value = 0
+	slider.max_value = 100
+	slider.step = 1
+	slider.value = sfx_volume * 100
+	slider.custom_minimum_size.y = 34
+	slider.value_changed.connect(func(value: float) -> void:
+		_set_sfx_volume(value / 100.0)
+		caption.text = "Effects volume · %d%%" % roundi(value)
+	)
+	parent.add_child(slider)
+	var preview := _button("Preview chime", false)
+	preview.pressed.connect(func() -> void: _play_sfx("correct"))
+	parent.add_child(preview)
+
+
+func _setup_music() -> void:
+	var settings := ConfigFile.new()
+	if settings.load("user://audio_settings.cfg") == OK:
+		music_volume = clampf(float(settings.get_value("music", "volume", 0.18)), 0.0, 1.0)
+		music_muted = bool(settings.get_value("music", "muted", false))
+	music_player = AudioStreamPlayer.new()
+	music_player.name = "BackgroundMusic"
+	var track: AudioStreamMP3 = preload("res://assets/audio/thinking-music.mp3").duplicate()
+	track.loop = true
+	music_player.stream = track
+	music_player.volume_db = -50.0
+	add_child(music_player)
+	music_player.play()
+	music_player.stream_paused = music_muted
+	music_fade = create_tween()
+	music_fade.tween_property(music_player, "volume_db", linear_to_db(maxf(music_volume, 0.0001)), 1.5)
+
+func _save_audio_settings() -> void:
+	var settings := ConfigFile.new()
+	settings.set_value("music", "volume", music_volume)
+	settings.set_value("music", "muted", music_muted)
+	settings.set_value("effects", "volume", sfx_volume)
+	settings.set_value("effects", "muted", sfx_muted)
+	settings.save("user://audio_settings.cfg")
+
+func _apply_music_settings() -> void:
+	if music_fade != null and music_fade.is_valid():
+		music_fade.kill()
+	music_player.volume_db = linear_to_db(maxf(music_volume, 0.0001))
+	music_player.stream_paused = music_muted or music_volume <= 0.0
+
+func _set_music_volume(value: float) -> void:
+	music_volume = clampf(value, 0.0, 1.0)
+	_apply_music_settings()
+	_save_audio_settings()
+
+func _set_music_muted(value: bool) -> void:
+	music_muted = value
+	_apply_music_settings()
+	_save_audio_settings()
+
+func _build_audio_settings(parent: BoxContainer) -> void:
+	parent.add_child(_label("Music", 19, TEXT, true))
+	var mute := CheckButton.new()
+	mute.text = "Mute music"
+	mute.button_pressed = music_muted
+	mute.add_theme_font_override("font", body_font)
+	mute.add_theme_font_size_override("font_size", 17)
+	mute.add_theme_color_override("font_color", TEXT)
+	mute.toggled.connect(_set_music_muted)
+	parent.add_child(mute)
+	var volume_label := _label("Music volume · %d%%" % roundi(music_volume * 100), 17, TEXT)
+	parent.add_child(volume_label)
+	var volume := HSlider.new()
+	volume.min_value = 0
+	volume.max_value = 100
+	volume.step = 1
+	volume.value = music_volume * 100
+	volume.custom_minimum_size.y = 34
+	volume.value_changed.connect(func(value: float) -> void:
+		_set_music_volume(value / 100.0)
+		volume_label.text = "Music volume · %d%%" % roundi(value)
+	)
+	parent.add_child(volume)
+	parent.add_child(_paragraph("Thinking Music — Kevin MacLeod (incompetech.com)\nLicensed under Creative Commons Attribution 4.0.\nOriginal track; looped with in-game volume and fade-in.", 14, MUTED))
+	var credit_links := _hbox(parent, 10)
+	var source := _button("Music source ↗", false)
+	source.pressed.connect(func() -> void: OS.shell_open("https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1600060"))
+	credit_links.add_child(source)
+	var license_link := _button("CC BY 4.0 ↗", false)
+	license_link.pressed.connect(func() -> void: OS.shell_open("https://creativecommons.org/licenses/by/4.0/"))
+	credit_links.add_child(license_link)
+
+
 func _process(delta: float) -> void:
-	if stage == "hint" and get_window().has_focus():
+	if not showing_title and stage in ["select", "hint"] and _game_has_focus():
 		elapsed += delta
 		autosave_clock += delta
 		if is_instance_valid(timer_label):
-			timer_label.text = _format_time(elapsed)
+			timer_label.text = ("Time: " if stage == "select" else "") + _format_time(elapsed)
 		if autosave_clock >= 5.0:
 			autosave_clock = 0.0
 			_save_progress()
+
+
+func _game_has_focus() -> bool:
+	return get_window().has_focus()
 
 
 func _on_resized() -> void:
@@ -362,7 +538,6 @@ func _choose_target(id: String) -> void:
 	target_id = id
 	hints.clear()
 	guesses.clear()
-	elapsed = 0.0
 	message = ""
 	stage = "hint"
 	_save_progress()
@@ -404,16 +579,17 @@ func _submit_hint() -> void:
 	for guess in guesses:
 		previous.append(guess.get("id", ""))
 	if jev_url.is_empty():
-		get_tree().create_timer(0.48).timeout.connect(_resolve_local_guess)
+		get_tree().create_timer(0.48).timeout.connect(_resolve_local_guess_for_run.bind(run_generation))
 		return
 	var payload := {"candidates": _candidates(), "hints": hints, "previous_guesses": previous, "level": level_index + 1}
 	var error := http.request(jev_url, PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if error != OK:
 		remote_failed = true
-		get_tree().create_timer(0.48).timeout.connect(_resolve_local_guess)
+		get_tree().create_timer(0.48).timeout.connect(_resolve_local_guess_for_run.bind(run_generation))
 
 
 func _show_message(value: String) -> void:
+	_play_sfx("miss")
 	message = value
 	_render()
 	call_deferred("_focus_current_hint")
@@ -438,6 +614,11 @@ func _on_http_completed(result: int, response_code: int, _headers: PackedStringA
 	_resolve_local_guess()
 
 
+func _resolve_local_guess_for_run(generation: int) -> void:
+	if generation == run_generation:
+		_resolve_local_guess()
+
+
 func _resolve_local_guess() -> void:
 	if stage != "thinking":
 		return
@@ -452,6 +633,7 @@ func _resolve_guess(id: String, reason: String) -> void:
 	if stage != "thinking" or not _current_ids().has(id):
 		return
 	var correct := id == target_id
+	_play_sfx("correct" if correct else "miss")
 	guesses.append({"id": id, "hint": hints.back(), "reason": reason, "correct": correct})
 	if correct:
 		_finish_level(true)
@@ -479,10 +661,12 @@ func _next_level() -> void:
 		return
 	if level_index + 1 >= levels.size():
 		stage = "complete"
+		_play_sfx("complete")
 		if last_completed_day != day_key:
 			streak = streak + 1 if not last_completed_day.is_empty() and _day_number(day_key) - _day_number(last_completed_day) == 1 else 1
 			last_completed_day = day_key
 	else:
+		_play_sfx("progress")
 		level_index += 1
 		stage = "select"
 		target_id = ""
@@ -506,8 +690,9 @@ func _format_time(seconds: float) -> String:
 
 
 func _render() -> void:
+	intro_open = false
 	for child in get_children():
-		if child != http and child != pool_http:
+		if child != http and child != pool_http and child != music_player and child != sfx_root:
 			remove_child(child)
 			child.queue_free()
 	timer_label = null
@@ -525,6 +710,9 @@ func _render() -> void:
 	paper.stretch_mode = TextureRect.STRETCH_TILE
 	paper.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(paper)
+	if showing_title:
+		_build_title()
+		return
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	margin.add_theme_constant_override("margin_left", 16 if tiny_layout else 26)
@@ -548,14 +736,165 @@ func _render() -> void:
 	_build_main(body)
 	_build_jev(body)
 	var footer := _hbox(page, 8)
-	footer.add_child(_label("Level %d / 7" % (level_index + 1) if tiny_layout else "Level %d of 7  ·  %s" % [level_index + 1, _current_level().get("theme", "Today’s mystery")], 14, MUTED))
 	_spacer(footer, true)
 	if data_source == "RAWG":
 		var attribution := _button("GAME DATA: RAWG ↗", false)
 		attribution.custom_minimum_size.y = 25
 		attribution.pressed.connect(func() -> void: OS.shell_open("https://rawg.io"))
 		footer.add_child(attribution)
-	footer.add_child(_label("★  Score %s" % _total_score(), 17, TEXT, true))
+
+
+
+func _back_to_main_menu() -> void:
+	if is_instance_valid(hint_edit):
+		hint_draft = hint_edit.text
+	_save_progress()
+	showing_title = true
+	_render()
+
+func _restart_run() -> void:
+	run_generation += 1
+	http.cancel_request()
+	level_index = 0
+	stage = "select"
+	target_id = ""
+	hints.clear()
+	guesses.clear()
+	results.clear()
+	hint_draft = ""
+	message = ""
+	elapsed = 0.0
+	autosave_clock = 0.0
+	used_remote = false
+	remote_failed = false
+	showing_title = false
+	_save_progress()
+	_render()
+
+func _build_run_navigation(parent: BoxContainer) -> void:
+	var back := _button("Main menu", false)
+	back.pressed.connect(_back_to_main_menu)
+	parent.add_child(back)
+	var restart := _button("Restart run", false)
+	restart.tooltip_text = "Start today's seven levels over with the same games"
+	restart.pressed.connect(_restart_run)
+	parent.add_child(restart)
+	var sound := _button("Music off" if music_muted else "Music on", false)
+	sound.tooltip_text = "Toggle background music; volume is in Settings"
+	sound.pressed.connect(func() -> void:
+		_set_music_muted(not music_muted)
+		sound.text = "Music off" if music_muted else "Music on"
+	)
+	parent.add_child(sound)
+
+
+func _start_game() -> void:
+	showing_title = false
+	_render()
+
+func _build_title() -> void:
+	var art := TextureRect.new()
+	art.texture = preload("res://assets/title-background.png")
+	art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(art)
+	if tiny_layout:
+		var wash := ColorRect.new()
+		wash.color = Color(0.96, 0.94, 0.88, 0.90)
+		wash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(wash)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.anchor_right = 1.0 if tiny_layout else 0.50
+	margin.add_theme_constant_override("margin_left", 24 if tiny_layout else 65)
+	margin.add_theme_constant_override("margin_right", 24 if tiny_layout else 35)
+	margin.add_theme_constant_override("margin_top", 30)
+	margin.add_theme_constant_override("margin_bottom", 60)
+	add_child(margin)
+	var menu := _vbox(margin, 18)
+	menu.alignment = BoxContainer.ALIGNMENT_CENTER
+	menu.add_child(_label("Guess What\nI Mean!", 42 if tiny_layout else (52 if compact_layout else 72), TEXT, true))
+	menu.add_child(_paragraph("A daily game of clues & clever guesses.", 18 if tiny_layout else 22, TEXT))
+	_gap(menu, 10)
+	var date := Time.get_date_dict_from_system()
+	menu.add_child(_label("%s %d · 7 DAILY LEVELS" % [MONTHS[date.month - 1], date.day], 13, MUTED))
+	var caption := "Start today’s game →"
+	if stage == "complete":
+		caption = "View today’s results →"
+	elif level_index > 0 or stage != "select" or elapsed > 0:
+		caption = "Continue today’s game →"
+	var start := _button(caption, true)
+	start.custom_minimum_size.y = 64
+	start.add_theme_font_override("font", heading_font)
+	start.add_theme_font_size_override("font_size", 20 if tiny_layout else 25)
+	start.pressed.connect(_start_game)
+	menu.add_child(start)
+	var rules := _button("How to play", false)
+	rules.custom_minimum_size.y = 58
+	rules.add_theme_font_override("font", heading_font)
+	rules.add_theme_font_size_override("font_size", 22)
+	rules.pressed.connect(_show_help)
+	menu.add_child(rules)
+	var settings := _button("Settings", false)
+	settings.add_theme_stylebox_override("normal", _style(Color.TRANSPARENT, Color.TRANSPARENT, 0, 0, 8))
+	settings.pressed.connect(_show_settings)
+	menu.add_child(settings)
+	var footer := _paragraph("One secret. Your clues. Jev’s best guess.", 14, TEXT)
+	footer.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	footer.position = Vector2(24 if tiny_layout else 65, size.y - 44)
+	footer.size.x = size.x - 48
+	add_child(footer)
+
+func _show_settings() -> void:
+	_open_menu_sheet("Settings", [], true)
+
+func _open_menu_sheet(title: String, paragraphs: Array, display_settings: bool = false) -> void:
+	if has_node("MenuSheet"):
+		return
+	var overlay := Control.new()
+	overlay.name = "MenuSheet"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(overlay)
+	var shade := ColorRect.new()
+	shade.color = Color(0.10, 0.08, 0.05, 0.65)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(shade)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	var panel := _panel(center, PANEL, BORDER, 12, 22)
+	panel.custom_minimum_size.x = minf(640, size.x - 40)
+	var content := _vbox(panel, 16)
+	content.add_child(_label(title, 28, TEXT, true))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = minf(360, size.y - 230)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content.add_child(scroll)
+	var copy := _vbox(scroll, 16)
+	copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	for text in paragraphs:
+		copy.add_child(_paragraph(String(text), 17, TEXT))
+	if display_settings:
+		_build_effects_settings(copy)
+		_build_audio_settings(copy)
+		copy.add_child(_paragraph("Display", 19, TEXT))
+		var fullscreen := CheckButton.new()
+		fullscreen.text = "Fullscreen"
+		fullscreen.add_theme_font_override("font", body_font)
+		fullscreen.add_theme_font_size_override("font_size", 18)
+		fullscreen.add_theme_color_override("font_color", TEXT)
+		fullscreen.button_pressed = DisplayServer.window_get_mode() == DisplayServer.WINDOW_MODE_FULLSCREEN
+		fullscreen.toggled.connect(func(enabled: bool) -> void:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if enabled else DisplayServer.WINDOW_MODE_WINDOWED)
+		)
+		copy.add_child(fullscreen)
+	var close := _button("Back", true)
+	close.pressed.connect(overlay.queue_free)
+	content.add_child(close)
+	close.grab_focus()
 
 
 func _build_header(parent: BoxContainer) -> void:
@@ -570,6 +909,8 @@ func _build_header(parent: BoxContainer) -> void:
 	help.tooltip_text = "How to play"
 	help.pressed.connect(_show_help)
 	row.add_child(help)
+	var navigation: BoxContainer = _hbox(parent, 10) if compact_layout else row
+	_build_run_navigation(navigation)
 	var steps := _hbox(parent, 8 if tiny_layout else 14)
 	for i in range(levels.size()):
 		var marker := _panel(steps, LIME if i < results.size() else (CORAL if i == level_index else PANEL), BORDER, 24, 6)
@@ -584,13 +925,14 @@ func _build_header(parent: BoxContainer) -> void:
 			steps.add_child(line)
 
 func _show_help() -> void:
-	var dialog := AcceptDialog.new()
-	dialog.title = "How to play"
-	dialog.dialog_text = "Pick a secret game. Jev sees the options, but never your choice.\n\nWrite a distinctive clue without using the title or list position.\nAfter each guess, try a new detail if Jev misses.\n\nFewer clues, fewer words, and less active time earn more points.\nSeven levels make up today's run."
-	add_child(dialog)
-	dialog.confirmed.connect(dialog.queue_free)
-	dialog.canceled.connect(dialog.queue_free)
-	dialog.popup_centered(Vector2i(520, 300))
+	_open_menu_sheet("How to play", [
+		"1. Pick a secret game. Read Quick intros if a game is unfamiliar. Jev sees the candidates, but never your choice.",
+		"2. Give a short clue about gameplay, setting, or a distinctive feature. Facts from Quick intros are allowed.",
+		"3. Read Jev’s guess. If it misses, try another clue before your attempts run out.",
+		"Keep title words and list positions out of your clues. Follow each level’s word limit.",
+		"Complete seven daily levels. Fewer clues, fewer words, and less active time earn more points; a missed level earns zero.",
+		"The timer begins after Start. Reading Quick intros, choosing a game, and writing clues all count. Jev’s thinking time and time outside the game window do not."
+	])
 
 
 func _build_sidebar(parent: BoxContainer) -> void:
@@ -644,8 +986,10 @@ func _build_main(parent: BoxContainer) -> void:
 
 func _build_select(box: BoxContainer) -> void:
 	box.add_child(_label("Pick your secret.", 30 if tiny_layout else 40, TEXT, true))
-	box.add_child(_paragraph("Choose one of %d games. Jev sees the list, but your choice stays secret." % _current_ids().size(), 16, MUTED))
+	box.add_child(_paragraph("New to these games? Read a Quick intro, then choose your secret.", 16, MUTED))
 	_build_cards(box, true)
+	timer_label = _label("Time: " + _format_time(elapsed), 16, MUTED)
+	box.add_child(timer_label)
 	box.add_child(_paragraph("Next: describe your game without using its title. %d guesses · %d words per clue." % [ATTEMPT_LIMITS[level_index], WORD_LIMITS[level_index]], 16, MUTED))
 	if _can_refresh():
 		var refresh := _button("Reshuffle board · %d left" % (MAX_REFRESHES - refresh_count), false)
@@ -700,7 +1044,7 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size.y = 410 if selectable else 310
+	scroll.custom_minimum_size.y = 450 if selectable else 350
 	box.add_child(scroll)
 	var row := _hbox(scroll, 12)
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -731,6 +1075,10 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 		caption.max_lines_visible = 3 if selectable else 2
 		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		content.add_child(caption)
+		var intro := _button("Quick intro", false)
+		intro.tooltip_text = "Learn about this game before writing a clue"
+		intro.pressed.connect(_show_game_intro.bind(String(game["id"])))
+		content.add_child(intro)
 		if not selectable:
 			var secret_mark := _label("✓ YOUR SECRET" if selected else " ", 13, CORAL, true)
 			secret_mark.custom_minimum_size.y = 18
@@ -744,6 +1092,7 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 			card.mouse_exited.connect(_highlight_card.bind(card, false))
 			card.gui_input.connect(func(event: InputEvent) -> void:
 				if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+					_play_sfx("button")
 					_choose_target(String(game["id"]))
 			)
 			for child in content.get_children():
@@ -752,6 +1101,80 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 			content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			card.tooltip_text = "Keep " + String(game["name"]) + " secret from Jev"
+
+
+func _intro_features(game: Dictionary) -> Array[String]:
+	var useful: Array[String] = []
+	for raw in game.get("features", []):
+		var feature := String(raw).replace("-", " ")
+		var lower := feature.to_lower()
+		if "steam" in lower or "controller" in lower or "leaderboard" in lower or "workshop" in lower or "achievement" in lower or "cloud" in lower:
+			continue
+		var plain_words := {"voxel": "A world made of cube-shaped blocks", "roguelike": "Repeatable runs with changing challenges", "metroidvania": "Explore connected areas and unlock new abilities", "soulslike": "Demanding combat with careful timing", "fps": "See the action through your character’s eyes"}
+		useful.append(String(plain_words.get(lower, feature.capitalize())))
+		if useful.size() == 3:
+			break
+	return useful
+
+func _close_game_intro(overlay: Control) -> void:
+	intro_open = false
+	overlay.queue_free()
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and has_node("MenuSheet"):
+		get_node("MenuSheet").queue_free()
+		get_viewport().set_input_as_handled()
+		return
+	if intro_open and event.is_action_pressed("ui_cancel"):
+		var overlay := get_node_or_null("GameIntro")
+		if overlay != null:
+			_close_game_intro(overlay)
+		get_viewport().set_input_as_handled()
+
+func _show_game_intro(id: String) -> void:
+	if intro_open or not catalog.has(id):
+		return
+	intro_open = true
+	var game: Dictionary = catalog[id]
+	var overlay := Control.new()
+	overlay.name = "GameIntro"
+	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(overlay)
+	var shade := ColorRect.new()
+	shade.color = Color(0.12, 0.10, 0.07, 0.65)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(shade)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	overlay.add_child(center)
+	var panel := _panel(center, PANEL, BORDER, 12, 22)
+	panel.custom_minimum_size = Vector2(minf(660, size.x - 40), 0)
+	var content := _vbox(panel, 14)
+	content.add_child(_label("Quick intro · No prior knowledge needed", 15, CORAL, true))
+	content.add_child(_paragraph(String(game.get("name", "Game")), 28, TEXT))
+	content.add_child(_label(String(game.get("genre", "Video game")), 16, MUTED))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size.y = minf(330, size.y - 290)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content.add_child(scroll)
+	var details := _vbox(scroll, 14)
+	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	details.add_child(_label("What you do", 19, TEXT, true))
+	var description := String(game.get("blurb", ""))
+	if description.is_empty() or description.begins_with("Gameplay tags:"):
+		description = "A %s game featuring %s." % [String(game.get("genre", "video")).to_lower(), ", ".join(_intro_features(game)).to_lower()]
+	details.add_child(_paragraph(description, 17, TEXT))
+	var features := _intro_features(game)
+	if not features.is_empty():
+		details.add_child(_label("Details you can use in a clue", 19, TEXT, true))
+		for feature in features:
+			details.add_child(_paragraph("• " + feature, 17, MUTED))
+	details.add_child(_paragraph("You may use these facts in your clue. Keep the game's title secret. Jev receives the same game information.", 15, MUTED))
+	var close := _button("Back to game", true)
+	close.pressed.connect(_close_game_intro.bind(overlay))
+	content.add_child(close)
+	close.grab_focus()
 
 
 func _highlight_card(card: PanelContainer, hovered: bool) -> void:
@@ -879,9 +1302,6 @@ func _build_jev(parent: BoxContainer) -> void:
 	portrait.custom_minimum_size.y = 180 if compact_layout else 250
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(portrait)
-	box.add_child(_label("Jev · your guessing detective", 16, TEXT, true))
-	var mode := "Offline clue matcher" if jev_url.is_empty() else ("Offline fallback" if remote_failed else "AI guessing partner")
-	box.add_child(_label(mode, 14, MUTED))
 	if not guesses.is_empty():
 		var scroll := ScrollContainer.new()
 		scroll.custom_minimum_size.y = 160
@@ -897,6 +1317,17 @@ func _build_jev(parent: BoxContainer) -> void:
 				log.add_child(_paragraph(String(guess.get("reason", "")), 12, MUTED))
 	else:
 		box.add_child(_paragraph("Pick a game. I’ll follow your clues.", 16, MUTED))
+
+	_gap(box, 12)
+	var divider := HSeparator.new()
+	divider.add_theme_stylebox_override("separator", _style(BORDER, BORDER, 0, 0, 0))
+	divider.custom_minimum_size.y = 1
+	box.add_child(divider)
+	_gap(box, 5)
+	var score_caption := _label("TOTAL SCORE", 12, MUTED)
+	score_caption.add_theme_font_override("font", heading_font)
+	box.add_child(score_caption)
+	box.add_child(_label(str(_total_score()), 52, TEXT, true))
 
 
 func _add_step(parent: BoxContainer, number: String, heading: String, detail: String) -> void:
@@ -946,6 +1377,7 @@ func _panel(parent: Node, fill: Color, line: Color, radius: int, padding: int) -
 func _button(value: String, primary: bool) -> Button:
 	var button := Button.new()
 	button.text = value
+	button.pressed.connect(_play_sfx.bind("button"))
 	button.custom_minimum_size.y = 42
 	button.add_theme_font_override("font", body_font)
 	button.add_theme_font_size_override("font_size", 15)
