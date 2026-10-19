@@ -25,7 +25,7 @@ const POOL_URL := "https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data
 # native builds) to override this at runtime; HTML5 builds always use
 # the constant because browsers have no process env. Leave empty to
 # force offline Jev.
-const DEFAULT_JEV_URL := "https://jev-proxy.pearmeow.workers.dev/guess"
+const DEFAULT_JEV_URL := "https://jev-proxy.thedle.workers.dev/guess"
 const MAX_REFRESHES := 2
 # Set to true to resume mid-run progress, streaks, and remaining
 # reshuffles across launches. Keep false for a "fresh every launch"
