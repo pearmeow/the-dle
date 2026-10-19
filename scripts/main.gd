@@ -586,6 +586,24 @@ func _build_header(parent: BoxContainer) -> void:
 	title_box.add_child(_label("GUESS WHAT I MEAN!", 22 if tiny_layout else 28, TEXT, true))
 	title_box.add_child(_label("THE DAILY AI GUESSING GAME", 11, MUTED))
 	_spacer(row, true)
+	# Reshuffle button sits to the left of the TODAY'S RUN panel, but
+	# only while the player is still on the level-1 select screen and
+	# the board came from the live RAWG pool.
+	if data_source == "RAWG" and level_index == 0 and results.is_empty() and target_id.is_empty() and hints.is_empty():
+		var remaining := MAX_REFRESHES - refresh_count
+		var refresh_text: String
+		if tiny_layout:
+			refresh_text = "↻ %d" % remaining
+		elif remaining > 0:
+			refresh_text = "RESHUFFLE  (%d LEFT)" % remaining
+		else:
+			refresh_text = "NO RESHUFFLES LEFT"
+		var refresh_btn := _button(refresh_text, false)
+		refresh_btn.disabled = not _can_refresh()
+		if _can_refresh():
+			refresh_btn.pressed.connect(_refresh_board)
+		refresh_btn.tooltip_text = "Shuffle today's games before picking level 1. Score still counts."
+		row.add_child(refresh_btn)
 	if not tiny_layout:
 		var date := Time.get_date_dict_from_system()
 		var date_panel := _panel(row, PANEL, BORDER, 10, 12)
@@ -653,21 +671,6 @@ func _build_select(box: BoxContainer) -> void:
 	rules.add_child(_chip("%d CANDIDATES" % _current_ids().size(), BLUE))
 	rules.add_child(_chip("%d GUESSES" % ATTEMPT_LIMITS[level_index], LIME))
 	rules.add_child(_chip("%d WORDS / HINT" % WORD_LIMITS[level_index], CORAL))
-	if data_source == "RAWG" and level_index == 0 and results.is_empty() and target_id.is_empty() and hints.is_empty():
-		_gap(box, 3)
-		var refresh_row := _hbox(box, 10)
-		var remaining := MAX_REFRESHES - refresh_count
-		var refresh_text := "RESHUFFLE BOARD  (%d LEFT)" % remaining if remaining > 0 else "NO RESHUFFLES LEFT"
-		var refresh_btn := _button(refresh_text, false)
-		refresh_btn.disabled = not _can_refresh()
-		if _can_refresh():
-			refresh_btn.pressed.connect(_refresh_board)
-		refresh_row.add_child(refresh_btn)
-		_spacer(refresh_row, true)
-		var caption := "Shuffle today's games before you pick level 1. Score still counts."
-		if remaining == 0:
-			caption = "You already used both reshuffles. Pick a game to start."
-		refresh_row.add_child(_label(caption, 11, MUTED))
 	_gap(box, 5)
 	box.add_child(_label("CHOOSE ONE GAME", 11, MUTED, true))
 	var scroller := ScrollContainer.new()
