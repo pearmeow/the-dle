@@ -11,7 +11,11 @@ def write(name, notes, duration, tap=False):
         t = i / RATE
         value = 0.0
         if tap:
-            value = (0.16 * rng.uniform(-1, 1) + 0.35 * math.sin(2 * math.pi * 530 * t)) * math.exp(-t * 62) * min(1, t / 0.003)
+            # Rounded, low bubble pop: smooth attack, falling pitch, no noise transient.
+            phase = 2 * math.pi * (230 * t + 140 * 0.018 * (1 - math.exp(-t / 0.018)))
+            envelope = (1 - math.exp(-t / 0.004)) * math.exp(-t / 0.020)
+            envelope *= max(0, 1 - (t / duration) ** 2)
+            value = 0.25 * math.sin(phase) * envelope
         for start, frequency, length in notes:
             age = t - start
             if 0 <= age < length:
@@ -21,7 +25,7 @@ def write(name, notes, duration, tap=False):
     with wave.open(str(OUT / (name + '.wav')), 'wb') as file:
         file.setnchannels(1); file.setsampwidth(2); file.setframerate(RATE)
         file.writeframes(b''.join(samples))
-write('button', [], 0.085, tap=True)
+write('button', [], 0.10, tap=True)
 write('correct', [(0, 523.25, .38), (.10, 659.25, .38), (.20, 783.99, .42)], .65)
 write('miss', [(0, 349.23, .19), (.10, 293.66, .23)], .36)
 write('progress', [(0, 440, .17), (.08, 587.33, .22)], .33)

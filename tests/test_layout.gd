@@ -16,7 +16,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for dimensions in [Vector2(1440, 900), Vector2(1024, 768), Vector2(800, 600), Vector2(480, 800), Vector2(360, 720)]:
+	for dimensions in [Vector2(1440, 900), Vector2(1152, 720), Vector2(1024, 768), Vector2(800, 600), Vector2(480, 800), Vector2(360, 720)]:
 		var game = PreviewGame.new()
 		root.add_child(game)
 		game._start_game()
@@ -50,6 +50,8 @@ func _run() -> void:
 		for i in range(game._current_ids().size()):
 			var candidate := _find_button(game, "%02d   " % [i + 1])
 			assert(candidate != null, "A candidate is missing at %s." % dimensions)
+			if dimensions.x >= 1100:
+				assert(_fits(candidate.get_global_rect(), dimensions), "All eight choices must fit without scrolling at %s." % dimensions)
 		var longest := ""
 		for id in game._current_ids():
 			if game._game_name(id).length() > game._game_name(longest).length():

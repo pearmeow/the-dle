@@ -2,7 +2,7 @@ extends SceneTree
 
 class LibraryGame extends "res://scripts/main.gd":
 	func _load_game_data() -> void:
-		day_key = "2026-10-19"
+		day_key = JSON.parse_string(FileAccess.get_file_as_string(BUNDLED_POOL))["generated_for"]
 		assert(_try_load_pool_board(BUNDLED_POOL))
 	func _load_daily_progress() -> void:
 		pass
@@ -18,7 +18,7 @@ func _run() -> void:
 	var game := LibraryGame.new()
 	game.size = Vector2(1440, 900)
 	root.add_child(game)
-	assert(game.game_library.size() == game.catalog.size(), "Every bundled daily game needs library coverage.")
+	assert(game.game_library.size() >= game.catalog.size(), "Every bundled daily game needs library coverage.")
 	for id in game.catalog:
 		var detail := game._game_details(String(id))
 		assert(not String(detail.get("blurb", "")).begins_with("Gameplay tags:"))
@@ -38,7 +38,7 @@ func _run() -> void:
 	game._start_game()
 	game._show_game_intro(String(game._current_ids()[0]))
 	assert(game.has_node("GameIntro"))
-	print("All 384 daily games have matching artwork, readable overviews, attribution, and equal Jev information.")
+	print("All bundled daily games have matching artwork, readable overviews, attribution, and equal Jev information.")
 	await create_timer(1.1).timeout
 	game.queue_free()
 	await process_frame

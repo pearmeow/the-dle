@@ -96,14 +96,40 @@ def distinguishable(group: list[dict]) -> bool:
     return True
 
 
+def solvable(group: list[dict]) -> bool:
+    """Every choice must have a clue that no other choice shares."""
+    return all(
+        tag_set(game) - set().union(*(tag_set(other) for other in group if other is not game))
+        for game in group
+    )
+
+
 def choose_group(pool: list[dict], count: int, target: float, minimum: float, used: set[str], rng: random.Random) -> list[dict]:
+    # A game may appear only once in a daily board, including as the anchor.
+    pool = [game for game in pool if game["id"] not in used]
+    if len(pool) < count:
+        raise RuntimeError("Not enough unused games to form a level.")
+    pairs = {}
+
+    def pair(left, right):
+        key = tuple(sorted((left["id"], right["id"])))
+        if key not in pairs:
+            score = jaccard(left, right)
+            valid = (left["name"].casefold() != right["name"].casefold()
+                     and len(tag_set(left) ^ tag_set(right)) >= 3 and score <= 0.78)
+            pairs[key] = (score, valid)
+        return pairs[key]
+
     best: list[dict] = []
     best_cost = float("inf")
     for _ in range(130):
         anchor = rng.choice(pool)
         group = [anchor]
+        pair_total = 0.0
         while len(group) < count:
-            choices = [game for game in pool if game not in group and distinguishable(group + [game])]
+            group_ids = {game["id"] for game in group}
+            choices = [game for game in pool if game["id"] not in group_ids
+                       and all(pair(game, other)[1] for other in group)]
             if not choices:
                 break
             # The small random sample keeps each dated board fresh while the
@@ -111,25 +137,44 @@ def choose_group(pool: list[dict], count: int, target: float, minimum: float, us
             choices = rng.sample(choices, min(len(choices), 70))
             next_game = min(
                 choices,
-                key=lambda game: abs(similarity(group + [game]) - target)
-                + (0.07 if game["id"] in used else 0.0)
+                key=lambda game: abs((pair_total + sum(pair(game, other)[0] for other in group))
+                                     / (len(group) * (len(group) + 1) / 2) - target)
                 + rng.random() * 0.025,
             )
+            pair_total += sum(pair(next_game, other)[0] for other in group)
             group.append(next_game)
-        if len(group) != count or similarity(group) < minimum:
+        if len(group) != count or similarity(group) < minimum or not solvable(group):
             continue
-        cost = abs(similarity(group) - target) + sum(game["id"] in used for game in group) * 0.04
+        cost = abs(similarity(group) - target)
         if cost < best_cost:
             best, best_cost = group, cost
+    if not best:
+        for _ in range(2500):
+            group = rng.sample(pool, count)
+            if not distinguishable(group) or similarity(group) < minimum or not solvable(group):
+                continue
+            cost = abs(similarity(group) - target)
+            if cost < best_cost:
+                best, best_cost = group, cost
     if not best:
         raise RuntimeError("Could not form a distinguishable level; fetch more RAWG pages.")
     return best
 
 
 def generate(pool: list[dict], seed: str) -> dict:
+    # Retry the whole board if early groups left no valid final group.
+    for attempt in range(4):
+        try:
+            return _generate_once(pool, seed, attempt)
+        except RuntimeError:
+            if attempt == 3:
+                raise
+
+
+def _generate_once(pool: list[dict], seed: str, attempt: int) -> dict:
     if len(pool) < 45:
         raise ValueError("At least 45 usable games are needed.")
-    rng = random.Random(seed)
+    rng = random.Random(seed if attempt == 0 else f"{seed}:retry:{attempt}")
     used: set[str] = set()
     previous_similarity = 0.0
     levels = []

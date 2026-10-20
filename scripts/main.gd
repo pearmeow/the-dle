@@ -352,19 +352,28 @@ func _try_load_pool_board(path: String) -> bool:
 
 
 func _board_for_variant(variant_index: int) -> Array:
-	# Preferred path: use the board CI pre-composed for us. Instant
-	# because it's just a list lookup; no choose_group loop at all.
-	if variant_index < pool_variants.size():
-		var pack = pool_variants[variant_index]
-		if typeof(pack) == TYPE_ARRAY and pack.size() == 7:
-			return pack
-	# Fallback: compose on the client. This path is slow for large
-	# pools (seconds, not milliseconds) because the GDScript Jaccard
-	# loop pays for every pair-wise tag comparison. Only reached when
-	# the pool JSON predates the "variants" field.
-	if pool_games.is_empty():
+	return _pool_pack(pool_games, pool_variants, variant_index)
+
+
+func _pool_pack(games_dict: Dictionary, variants: Array, index: int) -> Array:
+	# Use CI's exact choices: local recomposition could break the cooldown.
+	if index < 0 or index >= variants.size() or typeof(variants[index]) != TYPE_ARRAY:
 		return []
-	return LevelBuilder.build_pack(pool_games, day_key + "#" + str(variant_index))
+	var pack: Array = variants[index]
+	if pack.size() != LevelBuilder.SIZES.size():
+		return []
+	var used := {}
+	for i in range(pack.size()):
+		if typeof(pack[i]) != TYPE_DICTIONARY:
+			return []
+		var ids = pack[i].get("games", [])
+		if typeof(ids) != TYPE_ARRAY or ids.size() != LevelBuilder.SIZES[i]:
+			return []
+		for id in ids:
+			if typeof(id) != TYPE_STRING or not games_dict.has(id) or used.has(id):
+				return []
+			used[id] = true
+	return pack.duplicate(true)
 
 
 func _try_load_legacy_generated() -> bool:
@@ -1054,7 +1063,7 @@ func _build_sidebar(parent: BoxContainer) -> void:
 
 
 func _build_main(parent: BoxContainer) -> void:
-	var box := _vbox(parent, 14)
+	var box := _vbox(parent, 8 if size.y < 800 else 14)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1071,7 +1080,7 @@ func _build_main(parent: BoxContainer) -> void:
 
 
 func _build_select(box: BoxContainer) -> void:
-	box.add_child(_label("Pick your secret.", 30 if tiny_layout else 40, TEXT, true))
+	box.add_child(_label("Pick your secret.", 28 if size.y < 800 else (30 if tiny_layout else 40), TEXT, true))
 	box.add_child(_paragraph("New to these games? Read a Quick intro, then choose your secret.", 16, MUTED))
 	_build_cards(box, true)
 	timer_label = _label("Time: " + _format_time(elapsed), 16, MUTED)
@@ -1103,6 +1112,15 @@ func _card_art(game: Dictionary, width: float, height: float) -> Control:
 			image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			return image
 	# Unknown titles get a clearly typographic game file, never unrelated cover art.
+	if height <= 120:
+		var file_card := _panel(null, PANEL_LIGHT, BORDER, 3, 6)
+		file_card.custom_minimum_size = Vector2(width, height)
+		var file_title := _paragraph(name, 14, TEXT)
+		file_title.max_lines_visible = 2
+		file_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		file_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		file_card.add_child(file_title)
+		return file_card
 	var colors := [Color("#355653"), Color("#633e36"), Color("#504864"), Color("#515b34"), Color("#334f67")]
 	var ink: Color = colors[posmod(name.hash(), colors.size())]
 	var poster := _panel(null, ink, ink, 2, 14)
@@ -1136,16 +1154,18 @@ func _card_caption(game: Dictionary) -> String:
 	return String(game.get("genre", "Video game")) + (" · " + " / ".join(useful) if not useful.is_empty() else "")
 
 func _build_cards(box: BoxContainer, selectable: bool) -> void:
-	var scroll := ScrollContainer.new()
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size.y = 450 if selectable else 350
-	box.add_child(scroll)
-	var row := _hbox(scroll, 12)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var candidates := _candidates()
-	var width := clampf((size.x - (70 if compact_layout else 340) - (candidates.size() - 1) * 12) / max(1, candidates.size()), 156, 250)
+	var available := size.x - (52 if compact_layout else 303)
+	var columns := mini(candidates.size(), 4 if available >= 720 else (3 if available >= 510 else 2))
+	var dense := candidates.size() > columns or size.y < 800
+	var row := GridContainer.new()
+	row.name = "CandidateGrid"
+	row.columns = columns
+	row.add_theme_constant_override("h_separation", 10)
+	row.add_theme_constant_override("v_separation", 10)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_child(row)
+	var width := maxf(120, (available - (columns - 1) * 10) / columns)
 	for i in range(candidates.size()):
 		var game: Dictionary = candidates[i]
 		var selected := String(game["id"]) == target_id
@@ -1155,32 +1175,39 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		if selected:
 			card.add_theme_stylebox_override("panel", _style(PANEL, CORAL, 5, 3, 7))
-		var content := _vbox(card, 6)
-		var artwork := _card_art(game, width - 14, 200 if selectable else 100)
+		var content := _vbox(card, 3 if dense else 6)
+		var artwork := _card_art(game, width - 14, ((64 if size.y < 800 else 110) if selectable else 30) if dense else (170 if selectable else 100))
 		artwork.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		content.add_child(artwork)
-		var title := _paragraph(String(game["name"]), 18, TEXT)
+		var title := _paragraph(String(game["name"]), (12 if not selectable else 14) if dense else 18, TEXT)
 		title.add_theme_font_override("font", heading_font)
-		title.custom_minimum_size = Vector2(width - 14, 44)
+		title.custom_minimum_size = Vector2(width - 14, (28 if not selectable else 34) if dense else 44)
 		title.max_lines_visible = 2
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		content.add_child(title)
-		var caption := _paragraph(_card_caption(game), 16, MUTED)
-		caption.custom_minimum_size.y = 64 if selectable else 44
-		caption.max_lines_visible = 3 if selectable else 2
+		var caption := _paragraph(_card_caption(game), 12 if dense else 16, MUTED)
+		caption.custom_minimum_size.y = 18 if dense else (64 if selectable else 44)
+		caption.max_lines_visible = 1 if dense else (3 if selectable else 2)
 		caption.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		content.add_child(caption)
+		if dense and not selectable:
+			caption.free()
+		else:
+			content.add_child(caption)
 		var intro := _button("Quick intro", false)
 		intro.tooltip_text = "Learn about this game before writing a clue"
+		if dense:
+			_compact_card_button(intro)
 		intro.pressed.connect(_show_game_intro.bind(String(game["id"])))
 		content.add_child(intro)
-		if not selectable:
+		if not selectable and not dense:
 			var secret_mark := _label("✓ YOUR SECRET" if selected else " ", 13, CORAL, true)
 			secret_mark.custom_minimum_size.y = 18
 			content.add_child(secret_mark)
 		if selectable:
 			var choose := _button("%02d   Choose →" % [i + 1], false)
 			choose.add_theme_font_size_override("font_size", 16)
+			if dense:
+				_compact_card_button(choose)
 			choose.pressed.connect(_choose_target.bind(String(game["id"])))
 			content.add_child(choose)
 			card.mouse_entered.connect(_highlight_card.bind(card, true))
@@ -1196,6 +1223,18 @@ func _build_cards(box: BoxContainer, selectable: bool) -> void:
 			content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 			card.tooltip_text = "Keep " + String(game["name"]) + " secret from Jev"
+
+
+func _compact_card_button(button: Button) -> void:
+	button.custom_minimum_size.y = 27
+	button.add_theme_font_size_override("font_size", 12)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		var style := button.get_theme_stylebox(state).duplicate() as StyleBoxFlat
+		style.content_margin_top = 4
+		style.content_margin_bottom = 4
+		style.content_margin_left = 5
+		style.content_margin_right = 5
+		button.add_theme_stylebox_override(state, style)
 
 
 func _intro_features(game: Dictionary) -> Array[String]:
@@ -1337,8 +1376,8 @@ func _build_result(box: BoxContainer) -> void:
 	var won := stage == "won"
 	var result: Dictionary = results.back()
 	box.add_child(_label("LEVEL %02d / 07   •   %s" % [level_index + 1, "SOLVED" if won else "OUT OF GUESSES"], 12, LIME if won else CORAL, true))
-	_gap(box, 35)
-	box.add_child(_paragraph("Jev got it!" if won else "Jev missed this one.", 29 if tiny_layout else 39, TEXT))
+	_gap(box, 12 if size.y < 800 else 35)
+	box.add_child(_paragraph("Jev got it!" if won else "Jev missed this one.", 29 if size.y < 800 else (29 if tiny_layout else 39), TEXT))
 	box.add_child(_label("Your game was %s." % _game_name(target_id), 19, MUTED))
 	_gap(box, 15)
 	var score_panel := _panel(box, LIME if won else PANEL_LIGHT, LIME if won else BORDER, 16, 24)
@@ -1406,7 +1445,7 @@ func _build_jev(parent: BoxContainer) -> void:
 	portrait.texture = jev_art
 	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	portrait.custom_minimum_size.y = 180 if compact_layout else 250
+	portrait.custom_minimum_size.y = 130 if size.y < 800 else (180 if compact_layout else 250)
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(portrait)
 	if not jev_url.is_empty():
@@ -1420,7 +1459,7 @@ func _build_jev(parent: BoxContainer) -> void:
 		box.add_child(_paragraph(mode, 12, MUTED))
 	if not guesses.is_empty():
 		var scroll := ScrollContainer.new()
-		scroll.custom_minimum_size.y = 160
+		scroll.custom_minimum_size.y = 90 if size.y < 800 else 160
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		box.add_child(scroll)

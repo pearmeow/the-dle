@@ -2,7 +2,7 @@ extends SceneTree
 
 class IntegratedGame extends "res://scripts/main.gd":
 	func _load_game_data() -> void:
-		day_key = "2026-10-19"
+		day_key = JSON.parse_string(FileAccess.get_file_as_string(BUNDLED_POOL))["generated_for"]
 		assert(_try_load_pool_board(BUNDLED_POOL), "Bundled daily variants must load.")
 	func _load_daily_progress() -> void:
 		pass

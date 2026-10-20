@@ -13,7 +13,7 @@ The original audio file is included unchanged. The game plays it quietly, fades 
 
 The five WAV files in `sfx/` are original synthesized tones and noise, generated for this project without external samples. Rebuild them with `python3 tools/generate_sfx.py`.
 
-- button: soft tap
+- button: quiet rounded bubble pop with a smooth attack and falling pitch
 - correct: ascending chime
 - miss: gentle descending cue
 - progress: short rising two-note cue

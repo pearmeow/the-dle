@@ -3070,5 +3070,197 @@
     "source": "https://rawg.io/games/battlefield-1",
     "image_source": "https://media.rawg.io/media/games/998/9980c4296f311d8bcc5b451ca51e4fe1.jpg",
     "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_10724": {
+    "name": "Crossout",
+    "blurb": "Build a customized combat vehicle from parts, then drive into multiplayer battles and destroy opposing machines.",
+    "cover_path": "res://assets/daily-covers/rawg_10724.jpg",
+    "source": "https://rawg.io/games/crossout",
+    "image_source": "https://media.rawg.io/media/games/7a6/7a6f90e85a2e264c3b440bb4787cf378.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_11279": {
+    "name": "Day of Defeat: Source",
+    "blurb": "Fight World War II team battles, choose an infantry role, and capture objectives using careful movement and cooperation.",
+    "cover_path": "res://assets/daily-covers/rawg_11279.jpg",
+    "source": "https://rawg.io/games/day-of-defeat-source",
+    "image_source": "https://media.rawg.io/media/games/bff/bff7d82316cddea9541261a045ba008a.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_1140": {
+    "name": "World of Goo",
+    "blurb": "Connect living goo balls into flexible structures, solve physics puzzles, and guide enough of them toward each level’s exit.",
+    "cover_path": "res://assets/daily-covers/rawg_1140.jpg",
+    "source": "https://rawg.io/games/world-of-goo",
+    "image_source": "https://media.rawg.io/media/games/d03/d030347839f74454afcd1008248b08ae.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_1299": {
+    "name": "Mount & Blade: Warband",
+    "blurb": "Lead a medieval warband, recruit troops, trade, negotiate with factions, and command or join battles on horseback or foot.",
+    "cover_path": "res://assets/daily-covers/rawg_1299.jpg",
+    "source": "https://rawg.io/games/mount-blade-warband",
+    "image_source": "https://media.rawg.io/media/games/ccd/ccd40e8f86c0ae10a082b610d31d4475.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_13525": {
+    "name": "Assassin's Creed 2 Deluxe Edition",
+    "blurb": "Explore Renaissance Italian cities as an assassin, climb buildings, observe targets, and use stealth and weapons to complete missions.",
+    "cover_path": "res://assets/daily-covers/rawg_13525.jpg",
+    "source": "https://rawg.io/games/assassins-creed-2-deluxe-edition",
+    "image_source": "https://media.rawg.io/media/games/c14/c14d85f2ec10e82e3d5cd837c9c0a56d.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_15317": {
+    "name": "Shadow Warrior",
+    "blurb": "Fight demons with a katana, firearms, and supernatural powers in a fast first-person adventure.",
+    "cover_path": "res://assets/daily-covers/rawg_15317.jpg",
+    "source": "https://rawg.io/games/shadow-warrior-classic-redux",
+    "image_source": "https://media.rawg.io/media/screenshots/f7e/f7e70957c14ead1fa187a616dfa83e09.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_16649": {
+    "name": "Serious Sam 2",
+    "blurb": "Fight huge waves of enemies through colorful locations, constantly moving and switching between an exaggerated arsenal of weapons.",
+    "cover_path": "res://assets/daily-covers/rawg_16649.jpg",
+    "source": "https://rawg.io/games/serious-sam-2",
+    "image_source": "https://media.rawg.io/media/games/bc7/bc77b1eb8e35df2d90b952bac5342c75.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_19056": {
+    "name": "S.T.A.L.K.E.R.: Call of Pripyat",
+    "blurb": "Investigate a dangerous exclusion zone, scavenge equipment, complete faction missions, and survive mutants, armed enemies, and anomalies.",
+    "cover_path": "res://assets/daily-covers/rawg_19056.jpg",
+    "source": "https://rawg.io/games/stalker-call-of-pripyat",
+    "image_source": "https://media.rawg.io/media/games/5ad/5adab016a307c2902a82b60d487fe287.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_20992": {
+    "name": "Cry of Fear",
+    "blurb": "Explore a disturbing urban nightmare, solve puzzles, and manage scarce supplies while fighting or avoiding threatening creatures.",
+    "cover_path": "res://assets/daily-covers/rawg_20992.jpg",
+    "source": "https://rawg.io/games/cry-of-fear",
+    "image_source": "https://media.rawg.io/media/games/e06/e062facadfeb0a0339103bf7e81ca129.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_22397": {
+    "name": "Command & Conquer: Red Alert 3 - Uprising",
+    "blurb": "Command distinct futuristic armies, build bases, gather resources, and complete real-time strategy missions and challenges.",
+    "cover_path": "res://assets/daily-covers/rawg_22397.jpg",
+    "source": "https://rawg.io/games/command-conquer-red-alert-3-uprising",
+    "image_source": "https://media.rawg.io/media/games/4a1/4a1e460708b6c2114e4735e04dc58510.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_2255": {
+    "name": "7 Days to Die",
+    "blurb": "Scavenge a ruined world, craft equipment, build defenses, and prepare for increasingly dangerous zombie attacks.",
+    "cover_path": "res://assets/daily-covers/rawg_2255.jpg",
+    "source": "https://rawg.io/games/7-days-to-die",
+    "image_source": "https://media.rawg.io/media/games/5cb/5cbbc5cd24677331c85253f961cad72a.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_2556": {
+    "name": "Risk of Rain",
+    "blurb": "Fight through side-scrolling stages, collect stacking item upgrades, and race against difficulty that increases over time.",
+    "cover_path": "res://assets/daily-covers/rawg_2556.jpg",
+    "source": "https://rawg.io/games/risk-of-rain",
+    "image_source": "https://media.rawg.io/media/games/f62/f62eb0901c7017776e0a5c6a94f979d5.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_3268": {
+    "name": "The Vanishing of Ethan Carter",
+    "blurb": "Explore an abandoned valley, inspect clues, and reconstruct mysterious events through environmental investigation.",
+    "cover_path": "res://assets/daily-covers/rawg_3268.jpg",
+    "source": "https://rawg.io/games/the-vanishing-of-ethan-carter",
+    "image_source": "https://media.rawg.io/media/games/90c/90caf1fcb836cad70013452f6f239008.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_3561": {
+    "name": "Spelunky",
+    "blurb": "Explore randomly arranged caves, collect treasure, rescue captives, and use ropes, bombs, and careful jumps to survive traps.",
+    "cover_path": "res://assets/daily-covers/rawg_3561.jpg",
+    "source": "https://rawg.io/games/spelunky",
+    "image_source": "https://media.rawg.io/media/games/fad/fadc4be043ed07904012d47cd02671e4.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_382": {
+    "name": "Sniper Elite 4",
+    "blurb": "Explore large World War II mission areas, plan stealthy approaches, and use long-range shooting to eliminate targets.",
+    "cover_path": "res://assets/daily-covers/rawg_382.jpg",
+    "source": "https://rawg.io/games/sniper-elite-4",
+    "image_source": "https://media.rawg.io/media/games/2fe/2feec1ba840f467a2280061b9e665c6e.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_4361": {
+    "name": "Rayman Origins",
+    "blurb": "Run, jump, and fight through colorful side-scrolling stages, overcoming hazards alone or with other players.",
+    "cover_path": "res://assets/daily-covers/rawg_4361.jpg",
+    "source": "https://rawg.io/games/rayman-origins",
+    "image_source": "https://media.rawg.io/media/screenshots/375/375f84d018242d7519a230f623981217.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_4397": {
+    "name": "Battlefield 3",
+    "blurb": "Fight modern military battles, use infantry roles and vehicles, and coordinate with teammates to capture or defend objectives.",
+    "cover_path": "res://assets/daily-covers/rawg_4397.jpg",
+    "source": "https://rawg.io/games/battlefield-3",
+    "image_source": "https://media.rawg.io/media/games/8bd/8bda6d876f3e241c6024022299553efd.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_4414": {
+    "name": "Grand Theft Auto: Episodes from Liberty City",
+    "blurb": "Experience two connected crime stories in Liberty City, driving vehicles and completing missions as different protagonists.",
+    "cover_path": "res://assets/daily-covers/rawg_4414.jpg",
+    "source": "https://rawg.io/games/grand-theft-auto-episodes-from-liberty-city",
+    "image_source": "https://media.rawg.io/media/games/470/470d21d6971de8f13ec0e1664a120cc0.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_464": {
+    "name": "Baldur's Gate: Enhanced Edition",
+    "blurb": "Create a hero, assemble companions, explore a fantasy region, and direct tactical combat with the option to pause.",
+    "cover_path": "res://assets/daily-covers/rawg_464.jpg",
+    "source": "https://rawg.io/games/baldurs-gate-enhanced-edition",
+    "image_source": "https://media.rawg.io/media/games/313/3136687fb0b34490d082b7272a0868e2.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_58835": {
+    "name": "Yakuza Kiwami 2",
+    "blurb": "Explore Japanese entertainment districts, follow a crime conflict, and combine street fights with side activities.",
+    "cover_path": "res://assets/daily-covers/rawg_58835.jpg",
+    "source": "https://rawg.io/games/yakuza-kiwami-2",
+    "image_source": "https://media.rawg.io/media/games/b32/b32735e3f7d95959cc39265f555f2aa8.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_709": {
+    "name": "Hawken",
+    "blurb": "Pilot a combat mech in multiplayer arenas, managing weapons, movement, and repairs while fighting enemy teams.",
+    "cover_path": "res://assets/daily-covers/rawg_709.jpg",
+    "source": "https://rawg.io/games/hawken",
+    "image_source": "https://media.rawg.io/media/games/9da/9da42a4da370cc386c8578f0b2578e2c.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_887": {
+    "name": "Call of Duty: Infinite Warfare",
+    "blurb": "Fight a science-fiction military campaign with space missions, or compete in multiplayer and cooperate against zombies.",
+    "cover_path": "res://assets/daily-covers/rawg_887.jpg",
+    "source": "https://rawg.io/games/call-of-duty-infinite-warfare",
+    "image_source": "https://media.rawg.io/media/games/6f7/6f7341dd656910be2c2cda39193a7ec9.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_9495": {
+    "name": "ArmA II: Operation Arrowhead",
+    "blurb": "Take part in tactical military operations, coordinate infantry and vehicles, and navigate large battlefields with realistic combat systems.",
+    "cover_path": "res://assets/daily-covers/rawg_9495.jpg",
+    "source": "https://rawg.io/games/arma-2-operation-arrowhead",
+    "image_source": "https://media.rawg.io/media/screenshots/cce/cce227a4ac4e432ee0ba19d0dfe77c30.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
+  },
+  "rawg_9904": {
+    "name": "Age of Empires II HD",
+    "blurb": "Build a medieval civilization, gather resources, advance through ages, and command armies in real-time strategy battles.",
+    "cover_path": "res://assets/daily-covers/rawg_9904.jpg",
+    "source": "https://rawg.io/games/age-of-empires-ii-hd",
+    "image_source": "https://media.rawg.io/media/games/c07/c07e1c1e6908a2eeebd5dad0708abd01.jpg",
+    "text_kind": "Original concise gameplay summary, researched against the linked RAWG game page"
   }
 }
