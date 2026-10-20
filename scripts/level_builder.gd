@@ -195,4 +195,23 @@ static func _choose_group(pool: Array, count: int, target: float, minimum: float
 		if final_cost < best_cost:
 			best_cost = final_cost
 			best = group
+	# Greedy partial groups can converge below the progression floor even
+	# when valid full groups exist. Try seeded complete samples before giving up.
+	if best.is_empty():
+		for _attempt in range(2500):
+			var group := _shuffle_sample(pool, count, rng)
+			var valid := true
+			for i in range(group.size()):
+				for j in range(i + 1, group.size()):
+					if not _distinguishable_pair(group[i], group[j]):
+						valid = false
+			if not valid or _similarity(group) < minimum or not _solvable(group):
+				continue
+			var cost: float = abs(_similarity(group) - target)
+			for game in group:
+				if used.has(game["id"]):
+					cost += 0.04
+			if cost < best_cost:
+				best_cost = cost
+				best = group
 	return best

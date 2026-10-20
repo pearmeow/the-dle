@@ -4,21 +4,37 @@ A daily Godot game about describing video games to a guessing partner named Jev.
 
 ## Play
 
+The illustrated title screen offers **Start today’s game**, **How to play**, and **Settings** (fullscreen). Returning to the menu preserves the current run. The timer remains stopped on the title screen and starts after pressing Start or Continue.
+
 Open `project.godot` in Godot 4.7 or run:
 
 ```sh
 godot --path .
 ```
 
-The game works immediately in **offline mode**. It has two curated daily boards, each with seven levels. The board alternates by local date. Candidate order changes by date. Progress and streaks are saved in Godot's `user://daily_save.json` for the current device.
+The game works immediately in **offline mode**. It has two curated daily boards, each with seven levels. The board alternates by local date. Candidate order changes by date. The current `PERSIST_PROGRESS = false` setting starts a fresh run after closing the game; set it to `true` to save progress and streaks in Godot's `user://daily_save.json` for the current device.
 
 1. Pick one of the displayed games as your secret target.
 2. Write a hint without using words from its title.
 3. Read Jev's guess. If it misses, use another clue.
 
-Later levels have more similar candidates, shorter per-hint word limits, fewer guesses, and less explanation from Jev. A correct answer scores `max(100, 1000 − 220 × extra hints − 2 × total words − active seconds)`, with the time penalty capped at 150. A missed level scores zero. The game pauses its active timer while Jev is thinking or the window is unfocused.
+Later levels have more similar candidates, shorter per-hint word limits, fewer guesses, and less explanation from Jev. A correct answer scores `max(100, 1000 − 220 × extra hints − 2 × total words − active seconds)`, with the time penalty capped at 150. A missed level scores zero. The per-level timer starts when the candidate cards appear and includes Quick intro reading and clue-writing time. It pauses while Jev is thinking or the window is unfocused.
 
 Offline Jev is a deterministic clue matcher. It scores words and phrases against candidate features, favors details that are rare among the current options, and avoids prior guesses. It never receives the selected target. For real model guesses, use the optional server below.
+
+## Fresh UI playtest
+
+Run `godot --path . -- --playtest` for a fresh run without reading or writing daily progress. The window is labeled **Playtest**. Close it when finished. Normal launches use the `PERSIST_PROGRESS` setting.
+
+The tabletop interface uses matching game covers where available and typographic game-file cards for other titles. Cover sources are recorded in `assets/game-covers.json`; original mascot prompts and font license information are in `assets/ARTWORK.md`.
+
+## Music
+
+“Thinking Music” by Kevin MacLeod plays quietly across the title screen and gameplay, with a fade-in and looping playback. Use **Music on/off** during a run or **Settings** for volume and mute. Audio preferences are saved separately from daily progress. Full source and CC BY 4.0 attribution are in `assets/audio/CREDITS.md` and the in-game Settings panel.
+
+## Interaction feedback
+
+Buttons use a soft tap; correct guesses, missed guesses, level advancement, and daily completion each have their own quiet sound. Sound effects have independent volume and mute controls in Settings. The shared `_button` helper adds click feedback automatically to new buttons. Original effects are reproducible with `tools/generate_sfx.py`.
 
 ## Use a model for Jev
 
@@ -64,10 +80,22 @@ The server reads `.env` from the project root regardless of your working directo
 
 The curated boards ship with the game, so a RAWG key is not needed to play. For a live daily board that stays fresh after release, the project ships a two-step pipeline that keeps the RAWG API key out of the game binary:
 
-1. **GitHub Actions** runs `tools/fetch_pool.py` once a day. The workflow at `.github/workflows/daily-pool.yml` uses the `RAWG_API_KEY` repository secret, fetches ~200 games, and commits `data/daily_pool.json` to the `naxin` branch.
-2. **The Godot client** fetches that file from `https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json` on launch, caches it to `user://daily_pool.json`, and asks `scripts/level_builder.gd` to compose the 7 levels locally. The seed is the date, so every player on the same day sees the same board. If the network is unreachable or the file is stale, the game falls back to the bundled copy or the curated `levels.json`.
+1. **GitHub Actions** runs `tools/fetch_pool.py` once a day using the `RAWG_API_KEY` repository secret. It fetches up to 800 games (20 pages, before filtering), reads the persistent history from `naxin`, and excludes games reserved on the previous six calendar dates. It precomputes seven levels and two refresh variants, then commits the board and history to `naxin` together.
+2. **The Godot client** fetches `https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json` on launch and caches it to `user://daily_pool.json`. It validates and reads the precomputed variants directly, so every player sees the same boards. If the network is unreachable or the file is stale, the game falls back to the bundled copy or the curated `levels.json`.
 
-Because level composition happens on the client, the in-game **RESHUFFLE BOARD** button on level 1 can rebuild the day's board with a different sub-seed without ever contacting RAWG. It is only available before the first secret is picked, limited to two uses per day (`refresh_count` in `user://daily_save.json`), and the result still counts for scoring.
+The in-game **RESHUFFLE BOARD** button switches to the next precomputed variant without contacting RAWG. It is only available before the first secret is picked and limited to two uses per run. With `PERSIST_PROGRESS = true`, remaining refreshes are saved across launches for the current day. The result still counts for scoring.
+
+### Seven-day freshness policy
+
+Each day reserves 45 games: 40 distinct candidates for the initial seven levels plus five alternatives. Both refresh variants stay inside the same reserve. Refreshes preserve distinct candidates, uniquely describable clues, and increasing tag similarity. If no valid membership changes exist, a refresh can retain the same groups with a different option order.
+
+The next six calendar dates exclude all 45 reserved IDs, so **any seven consecutive published calendar dates have no repeated games**, including refresh options. Games become eligible again after seven days. The policy starts when history is first recorded; it cannot reconstruct old client-generated boards. It does not apply to the two fixed offline curated boards or the standalone `generate_levels.py` command.
+
+History is stored inside `daily_pool.json` and mirrored in `data/daily_history.json`. This preserves the cooldown even when an older workflow commits only `daily_pool.json`. Keep the published JSON between runs: runner-local caches alone are insufficient. Successful same-day reruns keep the published board unchanged. Backdated generation against newer history is rejected; use separate `--output` and `--history` paths for experiments.
+
+The minimum catalog size is 315 usable games for seven days of reserves; similarity and solvability constraints can require more. If fewer than 45 fresh games remain, or no valid board can be formed, generation fails without relaxing the cooldown or changing history. Increase `--pages` in the workflow if this happens.
+
+The updated workflow checks out generator code from the branch being run and published data from `naxin` separately. To publish immediately, manually run **Daily game pool** with branch **naxin** selected, then verify the resulting commit contains both JSON files. Scheduled workflows use the repository's default branch: merge the updated workflow and generator there to use the new workflow automatically. The previous workflow also checks out `naxin`, so it can still execute the updated generator and preserve embedded history. The runner defaults to UTC dates while clients check local dates; near a date boundary clients can temporarily use the offline fallback.
 
 ### Set the RAWG secret once
 
@@ -86,7 +114,7 @@ To create a pre-generated board on your own machine (useful for playtesting with
 
 ```sh
 RAWG_API_KEY=your_key python3 tools/fetch_pool.py --date 2026-10-19
-# or the full pre-composed board (writes data/generated_levels.json)
+# standalone one-off board, without the seven-day history policy
 RAWG_API_KEY=your_key python3 tools/generate_levels.py --date 2026-10-19
 ```
 
@@ -98,4 +126,5 @@ The generator compares gameplay tag sets with Jaccard similarity, selects candid
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 godot --headless --path . -s res://tests/test_game.gd
 godot --headless --path . -s res://tests/test_layout.gd
+godot --headless --path . -s res://tests/test_daily_pool.gd
 ```

@@ -1,5 +1,15 @@
 extends SceneTree
 
+class PreviewGame extends "res://scripts/main.gd":
+	func _load_game_data() -> void:
+		day_key = "2026-10-19"
+		_load_curated_board()
+	func _save_progress() -> void:
+		pass
+	func _fetch_latest_pool() -> void:
+		pass
+
+
 const Logic = preload("res://scripts/jev_logic.gd")
 const Builder = preload("res://scripts/level_builder.gd")
 
@@ -9,9 +19,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var scene := load("res://main.tscn")
-	var game = scene.instantiate()
+	var game = PreviewGame.new()
 	root.add_child(game)
+	game._start_game()
 	await process_frame
 	assert(game.levels.size() == 7, "The daily run needs seven levels.")
 	assert(Logic.reveals_title("It is Tetris", "Tetris"))
@@ -45,6 +55,10 @@ func _run() -> void:
 	assert(game.results.size() == 7)
 	assert(game._total_score() > 0)
 	print("Godot gameplay tests passed")
+	await create_timer(1.1).timeout
+	game.queue_free()
+	await process_frame
+	await create_timer(0.2).timeout
 	quit(0)
 
 
@@ -71,6 +85,20 @@ func _check_level_builder() -> void:
 	assert(pack_b.size() == 7, "Refresh variant must emit seven levels.")
 	for i in range(Builder.SIZES.size()):
 		assert(pack_a[i]["games"].size() == int(Builder.SIZES[i]), "Level %d has wrong candidate count." % i)
+	for pack in [pack_a, pack_b]:
+		var previous := 0.0
+		for level in pack:
+			var group: Array = []
+			for id in level["games"]:
+				var entry: Dictionary = games_dict[id].duplicate(true)
+				entry["_tagset"] = Builder._tag_set(entry["features"])
+				group.append(entry)
+			assert(Builder._solvable(group), "Fallback must preserve uniquely describable candidates.")
+			assert(Builder._similarity(group) >= previous + 0.004, "Fallback must preserve difficulty progression.")
+			for i in range(group.size()):
+				for j in range(i + 1, group.size()):
+					assert(Builder._distinguishable_pair(group[i], group[j]), "Fallback must keep candidates distinguishable.")
+			previous = Builder._similarity(group)
 	var pack_a_ids := _flatten_ids(pack_a)
 	var pack_b_ids := _flatten_ids(pack_b)
 	assert(pack_a_ids != pack_b_ids, "Different refresh seeds should produce different boards.")

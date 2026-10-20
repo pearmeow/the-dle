@@ -4,3 +4,10 @@
 __pycache__/
 *.pyc
 .env
+
+# Finder metadata
+.DS_Store
+
+# Installed dependencies and local merge recovery files
+**/node_modules/
+/recovery-before-switch/
