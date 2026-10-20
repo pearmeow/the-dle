@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/rawg_865.jpg-69b33c62dc30c049d8a685d49b1c9f03
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
