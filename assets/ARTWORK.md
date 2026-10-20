@@ -23,3 +23,7 @@ A game asset texture atlas, landscape ratio 3:2. EXACTLY six equal rectangular i
 `title-background.png` was made with the built-in image generation tool from the approved title-screen concept. Text and buttons are rendered by Godot, not baked into the image.
 
 Prompt: Edit this approved game title screen to produce ONLY its background illustration asset. Remove ALL text, letters, numbers, title, date, captions, words on books, buttons, button borders, underline strokes, UI and menus. Preserve the charming detective creature Jev on the RIGHT, the cozy study, golden window light, tea, magnifying glass, bookshelves and desk. Keep the LEFT 48 percent as quiet light cream parchment with very restrained texture and no foreground objects or strong dark shadows; this space will hold real rendered game UI text and buttons. Preserve the layout, warm watercolor and pencil illustration, beautiful lighting, landscape 16:10 composition. No text anywhere. Not a UI screenshot: illustration background only.
+
+## Daily game artwork
+
+`daily-covers/` contains 384 optimized JPEGs matching the games in the bundled daily pool. Images are game key art or screenshots from the RAWG entries, rather than invented covers. Individual game-page and original image URLs are recorded per game in `data/game-library.json`, and the Quick intro includes a source link. Images remain the property of their respective rights holders. The gameplay summaries are original concise descriptions researched against those game pages. Full third-party descriptions are not bundled.

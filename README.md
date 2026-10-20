@@ -119,3 +119,9 @@ godot --headless --path . -s res://tests/test_layout.gd
 ## Integrated branch
 
 `integration/matt-naxin-main` combines `Matt`, `naxin`, and shared `main`. It keeps Matt’s illustrated interface, timed Quick intros, menu, restart, music, and effects; adds Naxin’s Worker proxy, AI/offline switch, and precomputed daily variants; and preserves daily Continue saves. The AI switch is disabled while a guess is pending. Main was already an ancestor of Matt at integration time.
+
+## Local game information library
+
+The integrated build bundles `data/game-library.json` with matching images in `assets/daily-covers/` for all 384 games in the current daily pool. Each record contains an original concise gameplay overview and the RAWG game-page and image-source links. The card and Quick intro use the same overview supplied to Jev; every overview fits the existing remote proxy’s 250-character limit. Reading intros remains part of the active timer.
+
+This library stays separate from the downloaded daily pool, so refreshed boards retain local artwork and introductions for known IDs or matching titles. A newly introduced title outside these 384 entries still uses its supplied metadata and the existing fallback artwork until added to the library. The older curated-board cover collection remains available.

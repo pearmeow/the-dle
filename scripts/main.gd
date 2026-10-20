@@ -37,6 +37,8 @@ var run_generation := 0
 var showing_title := true
 var intro_open := false
 var cover_catalog: Dictionary = {}
+var game_library: Dictionary = {}
+var library_by_name: Dictionary = {}
 var playtest_mode := false
 var catalog: Dictionary = {}
 var levels: Array = []
@@ -87,6 +89,11 @@ func _ready() -> void:
 	var cover_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/game-covers.json"))
 	if cover_data is Dictionary:
 		cover_catalog = cover_data
+	var library_data = JSON.parse_string(FileAccess.get_file_as_string("res://data/game-library.json"))
+	if library_data is Dictionary:
+		game_library = library_data
+		for entry in game_library.values():
+			library_by_name[String(entry.get("name", "")).to_lower()] = entry
 	playtest_mode = OS.get_cmdline_user_args().has("--playtest")
 	if playtest_mode:
 		get_window().title = "Guess What I Mean! · Playtest"
@@ -579,10 +586,20 @@ func _candidates() -> Array:
 	var items := []
 	for id in ids:
 		if catalog.has(id):
-			var item: Dictionary = catalog[id].duplicate(true)
+			var item: Dictionary = _game_details(String(id))
 			item["id"] = id
 			items.append(item)
 	return items
+
+
+func _game_details(id: String) -> Dictionary:
+	var game: Dictionary = catalog.get(id, {}).duplicate(true)
+	var entry: Dictionary = game_library.get(id, library_by_name.get(String(game.get("name", "")).to_lower(), {}))
+	# Keep board mechanics and IDs intact; enrich every candidate equally.
+	for key in ["blurb", "cover_path", "source"]:
+		if not String(entry.get(key, "")).is_empty():
+			game[key] = entry[key]
+	return game
 
 
 func _game_name(id: String) -> String:
@@ -1066,6 +1083,15 @@ func _build_select(box: BoxContainer) -> void:
 		box.add_child(refresh)
 
 func _card_art(game: Dictionary, width: float, height: float) -> Control:
+	var cover_path := String(game.get("cover_path", ""))
+	if not cover_path.is_empty() and ResourceLoader.exists(cover_path):
+		var image := TextureRect.new()
+		image.texture = load(cover_path)
+		image.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		image.custom_minimum_size = Vector2(width, height)
+		image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return image
 	var name := String(game.get("name", "Game"))
 	for entry in cover_catalog.values():
 		if String(entry.get("name", "")).to_lower() == name.to_lower():
@@ -1179,6 +1205,13 @@ func _intro_features(game: Dictionary) -> Array[String]:
 		var lower := feature.to_lower()
 		if "steam" in lower or "controller" in lower or "leaderboard" in lower or "workshop" in lower or "achievement" in lower or "cloud" in lower:
 			continue
+		# Daily database tags can be noisy. Only present a tag as an intro
+		# fact when the written gameplay overview supports its wording.
+		if String(game.get("source", "")).begins_with("https://rawg.io/games/"):
+			var overview := JevLogic.normalized(String(game.get("blurb", "")))
+			var phrase := JevLogic.normalized(feature)
+			if not (" " + overview + " ").contains(" " + phrase + " "):
+				continue
 		var plain_words := {"voxel": "A world made of cube-shaped blocks", "roguelike": "Repeatable runs with changing challenges", "metroidvania": "Explore connected areas and unlock new abilities", "soulslike": "Demanding combat with careful timing", "fps": "See the action through your character’s eyes"}
 		useful.append(String(plain_words.get(lower, feature.capitalize())))
 		if useful.size() == 3:
@@ -1204,7 +1237,7 @@ func _show_game_intro(id: String) -> void:
 	if intro_open or not catalog.has(id):
 		return
 	intro_open = true
-	var game: Dictionary = catalog[id]
+	var game: Dictionary = _game_details(id)
 	var overlay := Control.new()
 	overlay.name = "GameIntro"
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1229,17 +1262,22 @@ func _show_game_intro(id: String) -> void:
 	content.add_child(scroll)
 	var details := _vbox(scroll, 14)
 	details.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	details.add_child(_label("What you do", 19, TEXT, true))
+	details.add_child(_label("Quick overview", 19, TEXT, true))
 	var description := String(game.get("blurb", ""))
 	if description.is_empty() or description.begins_with("Gameplay tags:"):
 		description = "A %s game featuring %s." % [String(game.get("genre", "video")).to_lower(), ", ".join(_intro_features(game)).to_lower()]
 	details.add_child(_paragraph(description, 17, TEXT))
+	var source := String(game.get("source", ""))
+	if source.begins_with("https://rawg.io/games/"):
+		var attribution := _button("Game information & artwork · RAWG ↗", false)
+		attribution.pressed.connect(func(): OS.shell_open(source))
+		details.add_child(attribution)
 	var features := _intro_features(game)
 	if not features.is_empty():
 		details.add_child(_label("Details you can use in a clue", 19, TEXT, true))
 		for feature in features:
 			details.add_child(_paragraph("• " + feature, 17, MUTED))
-	details.add_child(_paragraph("You may use these facts in your clue. Keep the game's title secret. Jev receives the same game information.", 15, MUTED))
+	details.add_child(_paragraph("You may use these facts in your clue. Keep the game's title secret. Jev receives each candidate’s overview and feature tags.", 15, MUTED))
 	var close := _button("Back to game", true)
 	close.pressed.connect(_close_game_intro.bind(overlay))
 	content.add_child(close)
