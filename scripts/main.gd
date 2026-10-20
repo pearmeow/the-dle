@@ -19,7 +19,16 @@ const GENERATED_PATH := "res://data/generated_levels.json"
 const BUNDLED_POOL := "res://data/daily_pool.json"
 const POOL_CACHE := "user://daily_pool.json"
 const POOL_URL := "https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json"
+# Public URL of the Cloudflare Worker that proxies the TypeSafe Jev
+# API. The TypeSafe key never ships with the game; the Worker holds
+# it as a Cloudflare secret. Set JEV_API_URL in the process env (for
+# native builds) to override this at runtime; HTML5 builds always use
+# the constant because browsers have no process env. Leave empty to
+# force offline Jev.
+const DEFAULT_JEV_URL := "https://jev-proxy.thedle.workers.dev/guess"
 const MAX_REFRESHES := 2
+# Preserve daily progress for Continue; --playtest bypasses progress storage.
+const PERSIST_PROGRESS := true
 const WORD_LIMITS := [18, 16, 14, 12, 11, 9, 8]
 const ATTEMPT_LIMITS := [5, 5, 4, 4, 4, 3, 3]
 const MONTHS := ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
@@ -48,11 +57,13 @@ var hint_draft := ""
 var jev_url := ""
 var used_remote := false
 var remote_failed := false
+var use_remote_jev := true
 var compact_layout := false
 var tiny_layout := false
 var data_source := "CURATED"
 var autosave_clock := 0.0
 var pool_games: Dictionary = {}
+var pool_variants: Array = []
 var refresh_count := 0
 
 var heading_font: Font = preload("res://assets/Bitter-Bold.ttf")
@@ -80,6 +91,8 @@ func _ready() -> void:
 	if playtest_mode:
 		get_window().title = "Guess What I Mean! · Playtest"
 	jev_url = OS.get_environment("JEV_API_URL").strip_edges()
+	if jev_url.is_empty():
+		jev_url = DEFAULT_JEV_URL
 	http = HTTPRequest.new()
 	http.timeout = 9.0
 	http.request_completed.connect(_on_http_completed)
@@ -305,19 +318,46 @@ func _try_load_pool_board(path: String) -> bool:
 		return false
 	if String(data.get("generated_for", "")) != day_key:
 		return false
+	var variants_raw: Array = data.get("variants", [])
+	if variants_raw.is_empty():
+		# Legacy JSON (pre-variants) would force the GDScript level
+		# builder to run synchronously here, freezing the window for
+		# several seconds. Skip it so the curated fallback renders
+		# instantly; the async pool fetch will replace us shortly
+		# with a modern copy that includes variants.
+		return false
 	var games_dict: Dictionary = data.get("games", {})
 	if games_dict.is_empty():
 		return false
-	var pack := LevelBuilder.build_pack(games_dict, day_key + "#" + str(refresh_count))
-	if pack.is_empty():
-		return false
 	pool_games = games_dict
+	pool_variants = variants_raw
+	var pack := _board_for_variant(refresh_count)
+	if pack.is_empty():
+		pool_games = {}
+		pool_variants = []
+		return false
 	catalog = games_dict
 	levels = pack
 	pack_index = 0
 	data_source = "RAWG"
 	board_id = "pool:" + day_key + ":v" + str(refresh_count)
 	return true
+
+
+func _board_for_variant(variant_index: int) -> Array:
+	# Preferred path: use the board CI pre-composed for us. Instant
+	# because it's just a list lookup; no choose_group loop at all.
+	if variant_index < pool_variants.size():
+		var pack = pool_variants[variant_index]
+		if typeof(pack) == TYPE_ARRAY and pack.size() == 7:
+			return pack
+	# Fallback: compose on the client. This path is slow for large
+	# pools (seconds, not milliseconds) because the GDScript Jaccard
+	# loop pays for every pair-wise tag comparison. Only reached when
+	# the pool JSON predates the "variants" field.
+	if pool_games.is_empty():
+		return []
+	return LevelBuilder.build_pack(pool_games, day_key + "#" + str(variant_index))
 
 
 func _try_load_legacy_generated() -> bool:
@@ -392,10 +432,14 @@ func _on_pool_fetched(result: int, code: int, _headers: PackedStringArray, body:
 	var games_dict: Dictionary = data.get("games", {})
 	if games_dict.is_empty():
 		return
-	var pack := LevelBuilder.build_pack(games_dict, day_key + "#" + str(refresh_count))
+	var variants_raw: Array = data.get("variants", [])
+	if variants_raw.is_empty():
+		return   # Server returned a legacy JSON; keep what we have
+	pool_games = games_dict
+	pool_variants = variants_raw
+	var pack := _board_for_variant(refresh_count)
 	if pack.is_empty():
 		return
-	pool_games = games_dict
 	catalog = games_dict
 	levels = pack
 	data_source = "RAWG"
@@ -423,7 +467,7 @@ func _refresh_board() -> void:
 	if not _can_refresh():
 		return
 	refresh_count += 1
-	var pack := LevelBuilder.build_pack(pool_games, day_key + "#" + str(refresh_count))
+	var pack := _board_for_variant(refresh_count)
 	if pack.is_empty():
 		refresh_count -= 1
 		return
@@ -435,6 +479,15 @@ func _refresh_board() -> void:
 
 
 func _load_daily_progress() -> void:
+	if not PERSIST_PROGRESS:
+		# Fresh start every launch: wipe any stale save left behind
+		# by a previous build so refresh_count, hints, guesses, and
+		# streak all reset. Progress is not tracked across sessions.
+		if FileAccess.file_exists(SAVE_PATH):
+			var user_dir := DirAccess.open("user://")
+			if user_dir != null:
+				user_dir.remove(SAVE_PATH.get_file())
+		return
 	if not FileAccess.file_exists(SAVE_PATH):
 		return
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
@@ -445,7 +498,11 @@ func _load_daily_progress() -> void:
 		return
 	streak = int(saved.get("streak", 0))
 	last_completed_day = String(saved.get("last_completed_day", ""))
-	if saved.get("day", "") != day_key or saved.get("board_id", "") != board_id:
+	if saved.get("day", "") != day_key:
+		return
+	var saved_refresh := clampi(int(saved.get("refresh_count", 0)), 0, MAX_REFRESHES)
+	var expected_board := "pool:" + day_key + ":v" + str(saved_refresh) if data_source == "RAWG" else board_id
+	if saved.get("board_id", "") != expected_board:
 		return
 	level_index = clampi(int(saved.get("level_index", 0)), 0, max(0, levels.size() - 1))
 	stage = String(saved.get("stage", "select"))
@@ -461,8 +518,8 @@ func _load_daily_progress() -> void:
 	refresh_count = clampi(int(saved.get("refresh_count", 0)), 0, MAX_REFRESHES)
 	# Rebuild today's board with the saved variant so the player sees
 	# the same shuffle they committed to before quitting.
-	if data_source == "RAWG" and refresh_count > 0 and not pool_games.is_empty():
-		var variant_pack := LevelBuilder.build_pack(pool_games, day_key + "#" + str(refresh_count))
+	if data_source == "RAWG" and refresh_count > 0:
+		var variant_pack := _board_for_variant(refresh_count)
 		if not variant_pack.is_empty():
 			levels = variant_pack
 			board_id = "pool:" + day_key + ":v" + str(refresh_count)
@@ -474,7 +531,7 @@ func _load_daily_progress() -> void:
 
 
 func _save_progress() -> void:
-	if playtest_mode:
+	if playtest_mode or not PERSIST_PROGRESS:
 		return
 	var record := {
 		"day": day_key,
@@ -578,7 +635,7 @@ func _submit_hint() -> void:
 	var previous := []
 	for guess in guesses:
 		previous.append(guess.get("id", ""))
-	if jev_url.is_empty():
+	if jev_url.is_empty() or not use_remote_jev:
 		get_tree().create_timer(0.48).timeout.connect(_resolve_local_guess_for_run.bind(run_generation))
 		return
 	var payload := {"candidates": _candidates(), "hints": hints, "previous_guesses": previous, "level": level_index + 1}
@@ -593,6 +650,18 @@ func _show_message(value: String) -> void:
 	message = value
 	_render()
 	call_deferred("_focus_current_hint")
+
+
+func _toggle_remote_jev() -> void:
+	if jev_url.is_empty() or stage == "thinking":
+		return
+	use_remote_jev = not use_remote_jev
+	# Clear stale status flags so the chip reflects the new choice
+	# cleanly instead of lingering on an old "fallback" state.
+	remote_failed = false
+	if not use_remote_jev:
+		used_remote = false
+	_render()
 
 
 func _on_http_completed(result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
@@ -1302,6 +1371,15 @@ func _build_jev(parent: BoxContainer) -> void:
 	portrait.custom_minimum_size.y = 180 if compact_layout else 250
 	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(portrait)
+	if not jev_url.is_empty():
+		var toggle_btn := _button("AI Jev: on" if use_remote_jev else "AI Jev: off", false)
+		toggle_btn.disabled = stage == "thinking"
+		toggle_btn.pressed.connect(_toggle_remote_jev)
+		box.add_child(toggle_btn)
+		var mode := "Online AI · clues sent to Jev" if use_remote_jev else "Offline clue matcher"
+		if use_remote_jev and remote_failed:
+			mode = "AI unavailable · offline fallback"
+		box.add_child(_paragraph(mode, 12, MUTED))
 	if not guesses.is_empty():
 		var scroll := ScrollContainer.new()
 		scroll.custom_minimum_size.y = 160

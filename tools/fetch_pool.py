@@ -36,16 +36,39 @@ def build_pool(api_key: str, pages: int) -> list[dict]:
     return pool
 
 
+def precompute_variants(pool: list[dict], day: str, count: int = 3) -> list[list[dict]]:
+    """Precompose the N boards the player might see today.
+
+    The in-game refresh button is capped at 2 uses, so three variants
+    (initial + two reshuffles) is enough. Doing it here in Python
+    means the Godot client never runs its own expensive composer and
+    the window never freezes at startup, no matter how large the pool.
+    """
+
+    variants: list[list[dict]] = []
+    for index in range(count):
+        seed = f"{day}#{index}"
+        try:
+            board = generate_levels.generate(pool, seed)
+        except Exception as exc:  # noqa: BLE001 - skip remaining if we fail
+            print(f"Variant {index} failed to compose: {type(exc).__name__}: {exc}")
+            break
+        variants.append(board["packs"][0])
+    return variants
+
+
 def to_output(day: str, pool: list[dict]) -> dict:
     games = {
         game["id"]: {key: value for key, value in game.items() if key not in ("id", "_tagset")}
         for game in pool
     }
+    variants = precompute_variants(pool, day)
     return {
         "generated_for": day,
         "source": "RAWG",
         "pool_size": len(games),
         "games": games,
+        "variants": variants,
     }
 
 

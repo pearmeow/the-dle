@@ -38,15 +38,33 @@ Buttons use a soft tap; correct guesses, missed guesses, level advancement, and 
 
 ## Use a model for Jev
 
-The included Python server calls [TypeSafe's Jev API](https://docs.typesafe.ai/api) with a [Choice question](https://docs.typesafe.ai/primitives/choice) over the unguessed games. Jev returns a game ID, not generated prose, so the game supplies a short fixed line beneath the guess. The API key stays in the server process. Godot sends only the candidate list, hints, and previous guesses; it checks the selected target locally.
+Jev can be powered by [TypeSafe's Jev API](https://docs.typesafe.ai/api) with a [Choice question](https://docs.typesafe.ai/primitives/choice) over the unguessed games. The API returns a game ID, not generated prose, so the game supplies a short fixed line beneath the guess. Godot sends only the candidate list, hints, and previous guesses; the selected target is checked locally and never leaves the client.
 
-Copy `.env.example` to `.env` in the project root and put your TypeSafe API key there:
+The TypeSafe API key must stay on a backend you control. Two paths ship:
+
+### Option A — Cloudflare Worker (recommended for itch.io / web builds)
+
+See `server/jev_worker/README.md` for the full walkthrough. Short version:
+
+```powershell
+cd server\jev_worker
+npm install
+npx wrangler login
+npx wrangler secret put JEV_API_KEY   # paste the TypeSafe key when prompted
+npx wrangler deploy                   # publishes to <name>.<account>.workers.dev
+```
+
+Update `DEFAULT_JEV_URL` in `scripts/main.gd` to the Worker URL (plus `/guess`). The game picks this up automatically on launch; HTML5 builds have no process env, so the constant is the only way they find the endpoint. The Worker holds the key in Cloudflare's secret store and is the only process that ever sees it.
+
+### Option B — Local Python server (handy during development)
+
+Copy `.env.example` to `.env` in the project root and add your key:
 
 ```dotenv
 JEV_API_KEY=your_typesafe_api_key
 ```
 
-The project `.env` file is ignored by Git. Start the server in one terminal, then the game in another:
+The project `.env` file is ignored by Git. Start the server, then the game, in separate terminals:
 
 ```sh
 python3 server/jev_server.py
@@ -56,16 +74,16 @@ python3 server/jev_server.py
 JEV_API_URL=http://127.0.0.1:8765/guess godot --path .
 ```
 
-The server reads `.env` from the project root regardless of your working directory. A process `JEV_API_KEY` takes precedence over `.env`; `JEV_MODEL` defaults to `jev-latest`. If the server is unreachable or returns an invalid answer, the game visibly falls back to offline Jev. The server listens on `127.0.0.1` by default. For a browser export, set `JEV_ALLOWED_ORIGIN` to the exact site origin and host the server behind HTTPS.
+The server reads `.env` from the project root regardless of your working directory. A process `JEV_API_KEY` takes precedence over `.env`; `JEV_MODEL` defaults to `jev-latest`. If the server is unreachable or returns an invalid answer, the game visibly falls back to offline Jev. The server listens on `127.0.0.1` by default. For a browser export, set `JEV_ALLOWED_ORIGIN` to the exact site origin and host the server behind HTTPS — or just use the Cloudflare Worker above, which already runs on HTTPS.
 
 ## Daily RAWG pool (CI-driven)
 
 The curated boards ship with the game, so a RAWG key is not needed to play. For a live daily board that stays fresh after release, the project ships a two-step pipeline that keeps the RAWG API key out of the game binary:
 
 1. **GitHub Actions** runs `tools/fetch_pool.py` once a day. The workflow at `.github/workflows/daily-pool.yml` uses the `RAWG_API_KEY` repository secret, fetches ~200 games, and commits `data/daily_pool.json` to the `naxin` branch.
-2. **The Godot client** fetches that file from `https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json` on launch, caches it to `user://daily_pool.json`, and asks `scripts/level_builder.gd` to compose the 7 levels locally. The seed is the date, so every player on the same day sees the same board. If the network is unreachable or the file is stale, the game falls back to the bundled copy or the curated `levels.json`.
+2. **The Godot client** fetches that file from `https://raw.githubusercontent.com/pearmeow/the-dle/naxin/data/daily_pool.json` on launch, caches it to `user://daily_pool.json`, and loads one of the three seven-level boards precomputed by CI. The seed is the date, so every player on the same day sees the same board. If the network is unreachable or the file is stale, the game falls back to the bundled copy or the curated `levels.json`.
 
-Because level composition happens on the client, the in-game **RESHUFFLE BOARD** button on level 1 can rebuild the day's board with a different sub-seed without ever contacting RAWG. It is only available before the first secret is picked, limited to two uses per day (`refresh_count` in `user://daily_save.json`), and the result still counts for scoring.
+The in-game **Reshuffle board** button on level 1 switches to another precomputed variant without contacting RAWG or blocking the game with level generation. It is only available before the first secret is picked, limited to two uses per day (`refresh_count` in `user://daily_save.json`), and the result still counts for scoring.
 
 ### Set the RAWG secret once
 
@@ -97,3 +115,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 godot --headless --path . -s res://tests/test_game.gd
 godot --headless --path . -s res://tests/test_layout.gd
 ```
+
+## Integrated branch
+
+`integration/matt-naxin-main` combines `Matt`, `naxin`, and shared `main`. It keeps Matt’s illustrated interface, timed Quick intros, menu, restart, music, and effects; adds Naxin’s Worker proxy, AI/offline switch, and precomputed daily variants; and preserves daily Continue saves. The AI switch is disabled while a guess is pending. Main was already an ancestor of Matt at integration time.
